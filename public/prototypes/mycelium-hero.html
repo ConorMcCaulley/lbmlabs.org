@@ -121,12 +121,12 @@
 
 <details class="panel" open>
   <summary>tune the organism · <span class="fps" id="fps">– fps</span></summary>
-  <label>growth speed <span class="val" id="vSpeed"></span><input type="range" id="pSpeed" min="6" max="60" value="22"></label>
+  <label>growth speed <span class="val" id="vSpeed"></span><input type="range" id="pSpeed" min="6" max="60" value="36"></label>
   <label>branchiness <span class="val" id="vBranch"></span><input type="range" id="pBranch" min="5" max="70" value="34"></label>
-  <label>density cap <span class="val" id="vCap"></span><input type="range" id="pCap" min="120" max="900" value="520"></label>
-  <label>pulse rate <span class="val" id="vPulse"></span><input type="range" id="pPulse" min="2" max="30" value="11"></label>
-  <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="45"></label>
-  <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="55"></label>
+  <label>density cap <span class="val" id="vCap"></span><input type="range" id="pCap" min="120" max="900" value="374"></label>
+  <label>pulse rate <span class="val" id="vPulse"></span><input type="range" id="pPulse" min="2" max="30" value="10"></label>
+  <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="21"></label>
+  <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="15"></label>
   <div class="row">
     <button id="bKill">kill a node</button>
     <button id="bReset">reset</button>
@@ -168,13 +168,16 @@ const ACCENT = { r: 159, g: 245, b: 201 };   // --accent
 const DPR_CAP = 1.5;                          // CPU budget: cap pixel density
 
 // ── tunables (bound to the review panel) ──────────────────────────
+// Defaults = Conor's tuning session (June 2026): faster, sparser,
+// much subtler glow, gentler cursor pull — the organism as ambience,
+// not spectacle. These are the production hero's starting values.
 const P = {
-  tipSpeed: 22,        // px/sec a growing tip advances
+  tipSpeed: 36,        // px/sec a growing tip advances
   branchPct: 34,       // % chance to branch at each new node
-  nodeCap: 520,        // stop growing past this many nodes
-  pulsesPerMin: 11,    // traffic intensity
-  cursorPull: 0.45,    // 0..1 nutrient attraction strength
-  glow: 0.55,          // edge brightness
+  nodeCap: 374,        // stop growing past this many nodes
+  pulsesPerMin: 10,    // traffic intensity
+  cursorPull: 0.21,    // 0..1 nutrient attraction strength
+  glow: 0.15,          // edge brightness
   nodeSpacing: 72,     // px walked between node drops
   mergeRadius: 11,     // px to fuse into an existing node
   turnNoise: 0.55,     // radians/step wobble
