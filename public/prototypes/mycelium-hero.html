@@ -97,7 +97,17 @@
     position: fixed; right: 12px; bottom: 12px; color: var(--dim);
     font: 11px/1.5 ui-monospace, monospace; max-width: 260px; text-align: right;
   }
-  #hint { bottom: 34px; }
+  #hint {
+    left: 50%; right: auto; bottom: 26px; transform: translateX(-50%);
+    max-width: none; text-align: center; color: var(--accent);
+    font-size: 13px; padding: 7px 16px; border-radius: 999px;
+    background: rgba(8, 12, 9, 0.55); border: 1px solid
+    color-mix(in srgb, var(--accent) 35%, transparent);
+    backdrop-filter: blur(4px); animation: hintBreathe 3.2s
+    ease-in-out infinite;
+  }
+  @keyframes hintBreathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #hint { animation: none; opacity: .8; } }
 </style>
 </head>
 <body>
@@ -138,7 +148,7 @@
   </div>
 </details>
 
-<div class="reduced-note" id="hint" style="opacity:.75">click any node to kill it — watch the mesh reroute</div>
+<div class="reduced-note" id="hint">click any node to break the network — watch it heal</div>
 <div class="reduced-note" id="rmNote" hidden>
   reduced-motion mode: fully-grown still, no animation —
   this is what <code>prefers-reduced-motion</code> visitors see.
@@ -539,7 +549,12 @@ addEventListener("pointermove", e => {
 canvas.addEventListener("pointerdown", e => {
   if (staticMode) return;
   const hit = nearNode(e.clientX, e.clientY, 16, gateway);
-  if (hit >= 0 && nodes[hit].alive) killNode(hit);
+  if (hit >= 0 && nodes[hit].alive) {
+    killNode(hit);
+    const h = document.getElementById("hint");
+    if (h) { h.style.transition = "opacity .8s"; h.style.opacity = "0";
+             setTimeout(() => h.remove(), 900); }
+  }
 });
 addEventListener("pointerleave", () => { mouse.x = -1e4; mouse.y = -1e4; });
 document.addEventListener("visibilitychange", () => {
