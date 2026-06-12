@@ -97,6 +97,7 @@
     position: fixed; right: 12px; bottom: 12px; color: var(--dim);
     font: 11px/1.5 ui-monospace, monospace; max-width: 260px; text-align: right;
   }
+  #hint { bottom: 34px; }
 </style>
 </head>
 <body>
@@ -128,7 +129,7 @@
   <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="21"></label>
   <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="15"></label>
   <div class="row">
-    <button id="bKill">kill a node</button>
+    <button id="bKill" title="or click any node directly">kill a node</button>
     <button id="bReset">reset</button>
     <button id="bOverlay">copy on/off</button>
     <button id="bStatic">reduced-motion preview</button>
@@ -137,6 +138,7 @@
   </div>
 </details>
 
+<div class="reduced-note" id="hint" style="opacity:.75">click any node to kill it — watch the mesh reroute</div>
 <div class="reduced-note" id="rmNote" hidden>
   reduced-motion mode: fully-grown still, no animation —
   this is what <code>prefers-reduced-motion</code> visitors see.
@@ -380,6 +382,12 @@ function pulseXY(p) {
 }
 
 // ── events: a node dies, the mesh routes around it ────────────────
+function killNode(i) {
+  nodes[i].alive = false;
+  nodes[i].diedAt = performance.now();
+  for (const ei of nodes[i].edges) edges[ei].alive = false;
+  dirty = true; // static layer must forget the dead strands
+}
 function killRandomNode() {
   const candidates = [];
   for (let i = 0; i < nodes.length; i++) {
@@ -389,11 +397,7 @@ function killRandomNode() {
       candidates.push(i);
   }
   if (!candidates.length) return;
-  const victim = candidates[Math.floor(Math.random() * candidates.length)];
-  nodes[victim].alive = false;
-  nodes[victim].diedAt = performance.now();
-  for (const ei of nodes[victim].edges) edges[ei].alive = false;
-  dirty = true; // static layer must forget the dead strands
+  killNode(candidates[Math.floor(Math.random() * candidates.length)]);
 }
 
 // ── rendering ─────────────────────────────────────────────────────
@@ -496,7 +500,23 @@ function growStatic() {
 }
 
 // ── wiring ────────────────────────────────────────────────────────
-addEventListener("pointermove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+addEventListener("pointermove", e => {
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  // crosshair when hovering a killable node — invites the click
+  if (!staticMode) {
+    const near = nearNode(mouse.x, mouse.y, 16, gateway);
+    canvas.style.cursor = near >= 0 ? "crosshair" : "default";
+  }
+});
+// Click a node to kill it and watch the mesh route around the loss —
+// the reliability story as a toy. The gateway is immune (there'd be
+// nothing to route TO), and clicks land on the canvas only where no
+// UI element (CTAs, panel) sits above it.
+canvas.addEventListener("pointerdown", e => {
+  if (staticMode) return;
+  const hit = nearNode(e.clientX, e.clientY, 16, gateway);
+  if (hit >= 0 && nodes[hit].alive) killNode(hit);
+});
 addEventListener("pointerleave", () => { mouse.x = -1e4; mouse.y = -1e4; });
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) { running = false; }
