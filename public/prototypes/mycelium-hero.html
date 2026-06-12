@@ -92,6 +92,7 @@
   }
   .panel button:hover { border-color: var(--accent); }
   .panel .fps { color: var(--accent); }
+  .panel .val { color: var(--accent); min-width: 3ch; text-align: right; margin-left: auto; }
   .reduced-note {
     position: fixed; right: 12px; bottom: 12px; color: var(--dim);
     font: 11px/1.5 ui-monospace, monospace; max-width: 260px; text-align: right;
@@ -120,17 +121,19 @@
 
 <details class="panel" open>
   <summary>tune the organism · <span class="fps" id="fps">– fps</span></summary>
-  <label>growth speed <input type="range" id="pSpeed" min="6" max="60" value="22"></label>
-  <label>branchiness <input type="range" id="pBranch" min="5" max="70" value="34"></label>
-  <label>density cap <input type="range" id="pCap" min="120" max="900" value="520"></label>
-  <label>pulse rate <input type="range" id="pPulse" min="2" max="30" value="11"></label>
-  <label>cursor pull <input type="range" id="pPull" min="0" max="100" value="45"></label>
-  <label>glow <input type="range" id="pGlow" min="10" max="100" value="55"></label>
+  <label>growth speed <span class="val" id="vSpeed"></span><input type="range" id="pSpeed" min="6" max="60" value="22"></label>
+  <label>branchiness <span class="val" id="vBranch"></span><input type="range" id="pBranch" min="5" max="70" value="34"></label>
+  <label>density cap <span class="val" id="vCap"></span><input type="range" id="pCap" min="120" max="900" value="520"></label>
+  <label>pulse rate <span class="val" id="vPulse"></span><input type="range" id="pPulse" min="2" max="30" value="11"></label>
+  <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="45"></label>
+  <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="55"></label>
   <div class="row">
     <button id="bKill">kill a node</button>
     <button id="bReset">reset</button>
     <button id="bOverlay">copy on/off</button>
     <button id="bStatic">reduced-motion preview</button>
+    <button id="bCopy">copy settings</button>
+    <button id="bDefaults">defaults</button>
   </div>
 </details>
 
@@ -497,14 +500,44 @@ document.addEventListener("visibilitychange", () => {
   else if (!staticMode) { running = true; prev = performance.now(); requestAnimationFrame(frame); }
 });
 
-const bind = (id, key, scale = 1) => {
-  const el = document.getElementById(id);
-  el.addEventListener("input", () => { P[key] = el.value * scale; });
+// Slider wiring: numeric readouts + localStorage persistence, so a
+// tuning session survives reloads and "copy settings" can hand the
+// exact values to whoever is building the production hero.
+const SLIDERS = [
+  ["pSpeed", "vSpeed", "tipSpeed", 1],
+  ["pBranch", "vBranch", "branchPct", 1],
+  ["pCap", "vCap", "nodeCap", 1],
+  ["pPulse", "vPulse", "pulsesPerMin", 1],
+  ["pPull", "vPull", "cursorPull", 0.01],
+  ["pGlow", "vGlow", "glow", 0.01],
+];
+const saved = JSON.parse(localStorage.getItem("mycelium-tuning") || "{}");
+for (const [id, vid, key, scale] of SLIDERS) {
+  const el = document.getElementById(id), out = document.getElementById(vid);
+  if (saved[id] != null) el.value = saved[id];
+  P[key] = el.value * scale;
+  out.textContent = el.value;
+  el.addEventListener("input", () => {
+    P[key] = el.value * scale;
+    out.textContent = el.value;
+    if (id === "pGlow") dirty = true;
+    const store = {};
+    for (const [sid] of SLIDERS) store[sid] = document.getElementById(sid).value;
+    localStorage.setItem("mycelium-tuning", JSON.stringify(store));
+  });
+}
+document.getElementById("bCopy").onclick = async (e) => {
+  const out = {};
+  for (const [id, , key, scale] of SLIDERS)
+    out[key] = +(document.getElementById(id).value * scale).toFixed(2);
+  await navigator.clipboard.writeText(JSON.stringify(out, null, 2));
+  e.target.textContent = "copied ✓";
+  setTimeout(() => { e.target.textContent = "copy settings"; }, 1200);
 };
-bind("pSpeed", "tipSpeed"); bind("pBranch", "branchPct");
-bind("pCap", "nodeCap"); bind("pPulse", "pulsesPerMin");
-bind("pPull", "cursorPull", 0.01); bind("pGlow", "glow", 0.01);
-document.getElementById("pGlow").addEventListener("input", () => { dirty = true; });
+document.getElementById("bDefaults").onclick = () => {
+  localStorage.removeItem("mycelium-tuning");
+  location.reload();
+};
 document.getElementById("bKill").onclick = () => killRandomNode();
 document.getElementById("bReset").onclick = () => {
   staticMode = false; document.getElementById("rmNote").hidden = true;
