@@ -287,9 +287,13 @@ function spawnTip(originIdx, dir) {
 }
 function stepTips(dt) {
   if (nodes.filter(n => n.alive).length >= P.nodeCap) { tips.length = Math.min(tips.length, 2); }
-  // keep a working population: regrow from random alive nodes
-  while (tips.length < P.tipsMin && nodes.length && nodes.length < P.nodeCap) {
-    spawnTip(Math.floor(Math.random() * nodes.length));
+  // keep a working population: regrow from random ALIVE nodes (a tip
+  // seeded on a dead node draws strands from nowhere)
+  if (tips.length < P.tipsMin && nodes.length < P.nodeCap) {
+    const alive = [];
+    for (let i = 0; i < nodes.length; i++) if (nodes[i].alive) alive.push(i);
+    while (tips.length < P.tipsMin && alive.length)
+      spawnTip(alive[Math.floor(Math.random() * alive.length)]);
   }
   const step = P.tipSpeed * dt;
   for (let t = tips.length - 1; t >= 0; t--) {
@@ -385,7 +389,27 @@ function pulseXY(p) {
 function killNode(i) {
   nodes[i].alive = false;
   nodes[i].diedAt = performance.now();
-  for (const ei of nodes[i].edges) edges[ei].alive = false;
+  const survivors = new Set();
+  for (const ei of nodes[i].edges) {
+    const e = edges[ei];
+    e.alive = false;
+    const other = e.a === i ? e.b : e.a;
+    if (nodes[other].alive) survivors.add(other);
+  }
+  // A tip anchored to the dead node would keep drawing strands out of
+  // a corpse — unattached-looking traces. Retire those tips; their
+  // un-deposited partial path simply never existed.
+  for (let t = tips.length - 1; t >= 0; t--)
+    if (tips[t].origin === i) tips.splice(t, 1);
+  // Healing: the wound regrows. Spawn fresh tips from the severed
+  // neighbors so cut-off sections visibly knit back into the mesh —
+  // death triggers growth, which is the most mycelial thing about it.
+  let spawned = 0;
+  for (const nIdx of survivors) {
+    if (spawned >= 2 || tips.length >= P.tipsMax) break;
+    spawnTip(nIdx);
+    spawned++;
+  }
   dirty = true; // static layer must forget the dead strands
 }
 function killRandomNode() {
