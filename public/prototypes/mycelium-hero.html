@@ -226,19 +226,21 @@ const P = {
   maxGateways: 5,      // hard ceiling
   nodesPerGateway: 90, // density target: ~1 gateway per this many nodes
   routeMs: 100,        // how often routing is re-evaluated
-  // Regrowth pacing: a node that loses signal waits this long (its own
-  // random draw) before re-homing, so healing ripples out organically
-  // over a few seconds rather than snapping back. Fresh growth joins
-  // almost instantly so the organism doesn't look laggy as it grows.
-  regrowLossMin: 0.55, regrowLossMax: 1.5,
-  regrowNewMin: 0.04, regrowNewMax: 0.22,
+  // Regrowth pacing: a small jitter before a node *starts* growing its
+  // link, so reconnection doesn't begin in lockstep. The strand's own
+  // travel time (linkGrowSpeed) supplies most of the organic delay.
+  regrowLossMin: 0.1, regrowLossMax: 0.5,
+  regrowNewMin: 0.02, regrowNewMax: 0.18,
+  linkGrowSpeed: 190,  // px/sec a connection strand reaches toward its target
+  linkWander: 1.6,     // rad/s organic wobble while a strand grows
 };
 
 // ── state ─────────────────────────────────────────────────────────
 let W = 0, H = 0, DPR = 1;
-let nodes = [];     // {x,y,alive,isGateway,connected,hops,parent,lostAt,regrowDelay,lit,phase,bornAt,diedAt}
-let tips = [];      // {x,y,dir,dist}
+let nodes = [];     // {x,y,alive,isGateway,connected,hops,parent,link,grow,lostAt,regrowDelay,lit,phase,...}
+let tips = [];      // {x,y,dir,dist} — node-placement growth
 let pulses = [];    // {path,seg,t,speed} traveling, or {held,holder} spooled at a node
+let retracting = []; // {pts,t0} — links fading out after a break/upgrade
 let mouse = { x: -1e4, y: -1e4 };
 let lastDeath = 0, lastPulse = 0, lastGateway = 0, lastRoute = 0;
 let routeDirty = true, running = true, staticMode = false;
@@ -277,6 +279,7 @@ function addNode(x, y, isGateway) {
   const gw = !!isGateway, now = performance.now();
   nodes.push({ x, y, alive: true, isGateway: gw,
                connected: gw, hops: gw ? 0 : Infinity, parent: -1,
+               link: null, grow: null,
                lostAt: gw ? 0 : now, regrowDelay: rand(P.regrowNewMin, P.regrowNewMax),
                lit: 0, glowOn: false, phase: rand(0, Math.PI * 2), bornAt: now, diedAt: 0 });
   routeDirty = true;
@@ -291,14 +294,131 @@ function nearNode(x, y, r) {
   return -1;
 }
 
-// Instant settle: full BFS from all gateways, everyone reachable becomes
-// connected at once. Used to seed the network and for the static still —
-// no staggered regrowth, just the resolved tree.
+// ── connections grow organically ──────────────────────────────────
+// Routing decides WHO each node links to (nearest in-range connected
+// neighbour with the fewest hops). But a chosen link is not instant: a
+// strand GROWS from the node toward the target, and the node does not
+// count as connected until the strand arrives. A better route is grown
+// BEFORE the old link drops (make-before-break). Healing therefore
+// ripples outward on its own — a node can only grow toward something
+// already connected, and the growth takes real time.
+
+function linkGeom(pts) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++)
+    cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  return { pts, cum, len: cum[cum.length - 1] || 1 };
+}
+function alongLink(g, d) {
+  const { pts, cum } = g; d = clamp(d, 0, g.len);
+  let i = 1; while (i < cum.length && cum[i] < d) i++;
+  if (i >= pts.length) return pts[pts.length - 1];
+  const seg = cum[i] - cum[i - 1] || 1, f = (d - cum[i - 1]) / seg;
+  return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+}
+function retract(geom, now) { if (geom) retracting.push({ pts: geom.pts, t0: now }); }
+
+function startGrow(i, target) {
+  const n = nodes[i], t = nodes[target];
+  n.grow = { target, tx: n.x, ty: n.y, len: 0,
+             pts: [[n.x, n.y]], dir: Math.atan2(t.y - n.y, t.x - n.x) };
+}
+// Advance every growing strand toward its target with a little organic
+// wobble; establish the link when it arrives (make-before-break).
+function stepLinkGrowth(dt, now) {
+  const step = P.linkGrowSpeed * dt, mr2 = P.mergeRadius * P.mergeRadius;
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (!n.alive || !n.grow) continue;
+    const g = n.grow, t = nodes[g.target];
+    if (!t || !t.alive || !t.connected) { n.grow = null; continue; } // target gone → abandon
+    const want = Math.atan2(t.y - g.ty, t.x - g.tx);
+    let d = want - g.dir; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+    g.dir += d * Math.min(1, dt * 5) + rand(-1, 1) * P.linkWander * dt;
+    g.tx += Math.cos(g.dir) * step; g.ty += Math.sin(g.dir) * step;
+    g.pts.push([g.tx, g.ty]); g.len += step;
+    if (dist2(g.tx, g.ty, t.x, t.y) < mr2) {            // arrived → establish
+      g.pts.push([t.x, t.y]);
+      if (n.link) retract(n.link, now);                // upgrade: old link withdraws
+      n.link = linkGeom(g.pts);
+      n.parent = g.target; n.hops = t.hops + 1; n.connected = true; n.lostAt = 0; n.grow = null;
+      routeDirty = true;
+    } else if (g.len > P.range * 2.4) { n.grow = null; } // wandered too far → give up, retry next tick
+  }
+}
+
+// Connectivity flows ONLY through established links: a node is connected
+// iff it is a gateway or its established parent is connected. Anything cut
+// off loses its link (which retracts) and starts searching.
+function recomputeConnectivity(now) {
+  const N = nodes.length;
+  const kids = new Array(N);
+  for (let i = 0; i < N; i++) {
+    const n = nodes[i]; kids[i] = [];
+    n._wasConn = n.connected;
+    if (n.isGateway) { n.connected = n.alive; n.hops = 0; }
+    else { n.connected = false; n.hops = Infinity; }
+  }
+  for (let i = 0; i < N; i++) {
+    const n = nodes[i];
+    if (n.alive && !n.isGateway && n.parent >= 0 && n.link) kids[n.parent].push(i);
+  }
+  const q = [];
+  for (let i = 0; i < N; i++) if (nodes[i].alive && nodes[i].isGateway) q.push(i);
+  for (let qi = 0; qi < q.length; qi++) {
+    const p = q[qi];
+    for (const c of kids[p]) {
+      if (nodes[c].alive && !nodes[c].connected) {
+        nodes[c].connected = true; nodes[c].hops = nodes[p].hops + 1; q.push(c);
+      }
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    const n = nodes[i];
+    if (!n.alive || n.isGateway) continue;
+    if (!n.connected && (n.parent >= 0 || n.link)) {   // link no longer reaches a gateway → break + retract
+      if (n.link) retract(n.link, now);
+      n.parent = -1; n.link = null;
+    }
+    if (!n.connected && n._wasConn) { n.lostAt = now; n.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax); }
+  }
+}
+// Decide what each node should grow toward this tick.
+function planGrowth(now) {
+  const N = nodes.length, R2 = P.range * P.range;
+  for (let i = 0; i < N; i++) {
+    const m = nodes[i];
+    if (!m.alive || m.isGateway || m.grow) continue;     // already growing → let it finish
+    let best = -1, bh = Infinity, bd = Infinity;
+    for (let j = 0; j < N; j++) {
+      const n = nodes[j];
+      if (!n.alive || !n.connected || j === i) continue;
+      const dd = dist2(m.x, m.y, n.x, n.y);
+      if (dd > R2) continue;
+      if (n.hops < bh || (n.hops === bh && dd < bd)) { bh = n.hops; bd = dd; best = j; }
+    }
+    if (best < 0) continue;                              // nothing connected in range yet → keep searching
+    if (!m.connected) {
+      if (m.lostAt === 0) { m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax); }
+      if (now - m.lostAt >= m.regrowDelay * 1000) startGrow(i, best);
+    } else if (bh + 1 < m.hops) {
+      startGrow(i, best);                                // sensed a better route → grow it before dropping the old
+    }
+  }
+}
+function maintainRouting(now) {
+  recomputeConnectivity(now);
+  planGrowth(now);
+  routeDirty = false;
+}
+
+// Instant settle (seed/static only): build straight established links so
+// the still / reset starts fully connected without animating.
 function settleRoutingInstant() {
   const N = nodes.length, R2 = P.range * P.range;
   for (let i = 0; i < N; i++) {
     const n = nodes[i];
-    n.hops = Infinity; n.parent = -1; n.connected = false;
+    n.hops = Infinity; n.parent = -1; n.connected = false; n.link = null; n.grow = null;
     if (n.alive && n.isGateway) { n.hops = 0; n.connected = true; n.lostAt = 0; }
   }
   const q = [];
@@ -312,12 +432,6 @@ function settleRoutingInstant() {
       mm.hops = nh; mm.connected = true; mm.lostAt = 0; q.push(m);
     }
   }
-  assignParents();
-  routeDirty = false;
-}
-// parent = closest in-range connected neighbour exactly one hop nearer
-function assignParents() {
-  const N = nodes.length, R2 = P.range * P.range;
   for (let i = 0; i < N; i++) {
     const m = nodes[i];
     if (!m.alive || m.isGateway || !m.connected) continue;
@@ -328,78 +442,8 @@ function assignParents() {
       const d = dist2(m.x, m.y, n.x, n.y);
       if (d <= R2 && d < bd) { bd = d; best = j; }
     }
-    if (best >= 0) m.parent = best;
+    if (best >= 0) { m.parent = best; m.link = linkGeom([[m.x, m.y], [nodes[best].x, nodes[best].y]]); }
   }
-}
-
-// Live routing maintenance, run a few times/second. Two responsibilities:
-//   (A) RECONNECT searching nodes — but only after each one's own regrow
-//       delay, and only to a neighbour that was already connected at the
-//       start of this tick. The delay + frontier-dependency make healing
-//       ripple outward from the live network over a few organic seconds.
-//   (B) MAINTAIN the live tree — BFS from gateways over connected nodes to
-//       refresh hops/parents (adopts new gateways, fixes drift) and demote
-//       any node that has lost all routes to a gateway into 'searching'.
-function maintainRouting(now) {
-  const N = nodes.length, R2 = P.range * P.range;
-  for (let i = 0; i < N; i++) { const n = nodes[i]; if (n.alive && n.isGateway) { n.connected = true; n.hops = 0; n.parent = -1; n.lostAt = 0; } }
-
-  // DETACH: if your actual uplink (parent) just died, you drop to
-  // searching and re-establish a link — even if an alternate exists. So
-  // every kill, especially a gateway, shows a visible spool-and-regrow
-  // beat in its neighbourhood rather than snapping silently to a backup.
-  for (let i = 0; i < N; i++) {
-    const m = nodes[i];
-    if (!m.alive || m.isGateway || !m.connected || m.parent < 0) continue;
-    const p = nodes[m.parent];
-    if (!p || !p.alive) {
-      m.connected = false; m.hops = Infinity; m.parent = -1;
-      m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax);
-    }
-  }
-
-  // (A) staggered reconnect (snapshot connectivity so at most one ring heals per tick)
-  const wasConnected = new Array(N);
-  for (let i = 0; i < N; i++) wasConnected[i] = nodes[i].connected;
-  for (let i = 0; i < N; i++) {
-    const m = nodes[i];
-    if (!m.alive || m.isGateway || m.connected) continue;
-    if (m.lostAt === 0) { m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax); }
-    if ((now - m.lostAt) < m.regrowDelay * 1000) continue;   // still regrowing
-    let best = -1, bd = Infinity, bh = Infinity;
-    for (let j = 0; j < N; j++) {
-      const n = nodes[j];
-      if (!n.alive || !wasConnected[j]) continue;
-      const d = dist2(m.x, m.y, n.x, n.y);
-      if (d > R2) continue;
-      if (n.hops < bh || (n.hops === bh && d < bd)) { bh = n.hops; bd = d; best = j; }
-    }
-    if (best >= 0) { m.parent = best; m.hops = nodes[best].hops + 1; m.connected = true; m.lostAt = 0; }
-  }
-
-  // (B) maintain the live tree + demote any node that lost gateway reach
-  const th = new Array(N).fill(Infinity), reach = new Array(N).fill(false), q = [];
-  for (let i = 0; i < N; i++) if (nodes[i].alive && nodes[i].isGateway) { th[i] = 0; reach[i] = true; q.push(i); }
-  for (let qi = 0; qi < q.length; qi++) {
-    const ni = q[qi], n = nodes[ni], nh = th[ni] + 1;
-    for (let m = 0; m < N; m++) {
-      const mm = nodes[m];
-      if (m === ni || !mm.alive || mm.isGateway || !mm.connected || th[m] <= nh) continue;
-      if (dist2(n.x, n.y, mm.x, mm.y) > R2) continue;
-      th[m] = nh; reach[m] = true; q.push(m);
-    }
-  }
-  for (let i = 0; i < N; i++) {
-    const m = nodes[i];
-    if (!m.alive || m.isGateway || !m.connected) continue;
-    if (!reach[i]) {                       // connected but no longer reaches a gateway → signal lost
-      m.connected = false; m.hops = Infinity; m.parent = -1;
-      m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax);
-    } else {
-      m.hops = th[i];
-    }
-  }
-  assignParents();
   routeDirty = false;
 }
 
@@ -521,16 +565,15 @@ function stepPulses(dt) {
     const a = p.path[p.seg];
     if (!nodes[a].alive) { pulses.splice(i, 1); continue; }
     let b = p.path[p.seg + 1];
-    // primary link may have switched (routing update / death)
-    if (b == null || !nodes[b].alive || nodes[a].parent !== b) {
+    let link = nodes[a].link;                            // a's uplink — the grown strand toward its parent
+    // link may have broken or switched (routing update / death)
+    if (b == null || !nodes[b].alive || nodes[a].parent !== b || !link) {
       const np = nodes[a].connected ? pathToGateway(a) : null;
-      if (np) { p.path = np; p.seg = 0; p.t = 0; b = p.path[1]; }
-      else { p.held = true; p.holder = a; continue; }   // no route → spool here
+      if (np && np.length >= 2) { p.path = np; p.seg = 0; p.t = 0; b = p.path[1]; link = nodes[a].link; }
+      if (!link) { p.held = true; p.holder = a; continue; }   // no route → spool here
     }
-    const A = nodes[a], B = nodes[b];
-    const segLen = Math.hypot(B.x - A.x, B.y - A.y) || 1;
     p.t += p.speed * dt;
-    if (p.t >= segLen) {
+    if (p.t >= link.len) {                               // arrived at the next node
       if (nodes[b].isGateway) {
         nodes[b].lit = 1.8;         // gateway always flares on delivery
       } else if (litMode === "relay") {
@@ -543,10 +586,9 @@ function stepPulses(dt) {
   }
 }
 function pulseXY(p) {
-  const A = nodes[p.path[p.seg]], B = nodes[p.path[p.seg + 1]];
-  const segLen = Math.hypot(B.x - A.x, B.y - A.y) || 1;
-  const f = clamp(p.t / segLen, 0, 1);
-  return [A.x + (B.x - A.x) * f, A.y + (B.y - A.y) * f];
+  const a = p.path[p.seg], link = nodes[a].link;
+  if (!link) return [nodes[a].x, nodes[a].y];
+  return alongLink(link, p.t);                           // ride the grown strand toward the parent
 }
 
 // ── events: a node (or gateway) dies, children re-home ────────────
@@ -573,19 +615,35 @@ function killRandomNode() {
 }
 
 // ── rendering ─────────────────────────────────────────────────────
-function drawLinks() {
-  // every primary radio link, batched into a single stroke
-  ctx.strokeStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${0.1 + P.glow * 0.4})`;
+function strokePts(pts) {
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]);
+}
+function drawLinks(now) {
+  // established primary links — the organic grown strands
   ctx.lineWidth = 1.0;
+  ctx.strokeStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${0.1 + P.glow * 0.4})`;
   ctx.beginPath();
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
-    if (!n.alive || n.parent < 0) continue;
-    const p = nodes[n.parent];
-    if (!p || !p.alive) continue;
-    ctx.moveTo(n.x, n.y); ctx.lineTo(p.x, p.y);
+    if (n.alive && n.link) strokePts(n.link.pts);
   }
   ctx.stroke();
+  // growing strands — the reaching frontier, a touch brighter
+  ctx.strokeStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${0.18 + P.glow * 0.4})`;
+  ctx.beginPath();
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (n.alive && n.grow && n.grow.pts.length > 1) strokePts(n.grow.pts);
+  }
+  ctx.stroke();
+  // retracting strands — withdraw with a brief fade
+  for (let r = retracting.length - 1; r >= 0; r--) {
+    const rr = retracting[r], f = 1 - (now - rr.t0) / 700;
+    if (f <= 0) { retracting.splice(r, 1); continue; }
+    ctx.strokeStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${(0.12 + P.glow * 0.3) * f})`;
+    ctx.beginPath(); strokePts(rr.pts); ctx.stroke();
+  }
 }
 function drawGateway(n, now) {
   const breathe = 0.5 + 0.3 * Math.sin(now / 900 + n.phase);
@@ -603,7 +661,7 @@ function drawGateway(n, now) {
 }
 function render(now) {
   ctx.clearRect(0, 0, W, H);
-  drawLinks();
+  drawLinks(now);
   ctx.globalCompositeOperation = "lighter";
 
   // nodes: faint breathing shimmer; bright when relaying. Gateways special.
@@ -655,9 +713,11 @@ function render(now) {
     ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},0.18)`;
     ctx.beginPath(); ctx.arc(x, y, 6.5, 0, 7); ctx.fill();
   }
-  // growing tips: the faint bright frontier
+  // node-placement tips + growing-link frontiers: the bright reaching points
   ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},0.6)`;
   for (const t of tips) { ctx.beginPath(); ctx.arc(t.x, t.y, 1.1, 0, 7); ctx.fill(); }
+  ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},0.85)`;
+  for (const n of nodes) { if (n.alive && n.grow) { ctx.beginPath(); ctx.arc(n.grow.tx, n.grow.ty, 1.3, 0, 7); ctx.fill(); } }
   ctx.globalCompositeOperation = "source-over";
 }
 
@@ -675,6 +735,7 @@ function frame(now) {
   }
   if (now - lastDeath > P.deathEverySec * 1000) { killRandomNode(); lastDeath = now; }
   if (routeDirty || now - lastRoute > P.routeMs) { maintainRouting(now); lastRoute = now; }
+  stepLinkGrowth(dt, now);
   if (now - lastPulse > 60000 / Math.max(P.pulsesPerMin * 12, 1)) { spawnPulse(); lastPulse = now; }
   stepPulses(dt);
   render(now);
@@ -691,12 +752,12 @@ function frame(now) {
 }
 
 function seed() {
-  nodes = []; tips = []; pulses = []; routeDirty = true;
+  nodes = []; tips = []; pulses = []; retracting = []; routeDirty = true;
   lastGateway = performance.now();           // stagger the first new gateway
-  // first gateway sits right-of-center so hero copy (left) breathes
+  // first gateway sits right-of-center so hero copy (left) breathes; the
+  // network grows out and wires itself up organically from here (no settle)
   const g = addNode(W * 0.62, H * 0.48, true);
   for (let i = 0; i < 5; i++) spawnTip(g, (i / 5) * Math.PI * 2 + rand(-0.2, 0.2));
-  settleRoutingInstant();
 }
 
 // reduced motion: grow the whole organism invisibly, draw one still
@@ -710,11 +771,12 @@ function growStatic() {
   }
   while (gatewayCount() < gatewayTarget()) addGateway();
   settleRoutingInstant();
+  const now = performance.now();
   ctx.clearRect(0, 0, W, H);
-  drawLinks();
+  drawLinks(now);
   for (const n of nodes) {
     if (!n.alive) continue;
-    if (n.isGateway) { drawGateway(n, performance.now()); continue; }
+    if (n.isGateway) { drawGateway(n, now); continue; }
     ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${isFinite(n.hops) ? 0.3 : 0.14})`;
     ctx.beginPath(); ctx.arc(n.x, n.y, 1.6, 0, 7); ctx.fill();
   }
