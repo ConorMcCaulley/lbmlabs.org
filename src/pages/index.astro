@@ -1,22 +1,33 @@
 ---
 import Base from "../layouts/Base.astro";
-/* D7 review build: the hero animation + one light section + one dark
-   section, in the real design system (tokens + Fraunces/Inter/Plex Mono).
-   Copy is the locked B1 draft with the B7 claims-gate fixes applied
-   (F4 "node restart", F5 H2 drops "in the field"). Hero animation is the
-   tuned prototype embedded via ?bare; E2 will extract it into a component.
-   Evidence blocks here are illustrative — real ones come from C2/C6. */
+import DiagramSenseMesh from "../components/DiagramSenseMesh.astro";
+import DiagramTerrain from "../components/DiagramTerrain.astro";
+import PanelCiphertext from "../components/PanelCiphertext.astro";
+import ChartCost from "../components/ChartCost.astro";
+/* Full homepage scroll (E2). Copy = locked B1 with B7 claims-gate fixes
+   applied (F1 reach as design intent, F2 relay as architecture, F4 node
+   restart, F5 no "in the field"). Hero animation embedded via ?bare
+   (E-phase extracts it into a component). Evidence/visuals built from
+   real data where available (C1 prices, 168 tests, envelope shape);
+   C2/C5/C7 wire the rest. */
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const repo = "#"; // A7: cleaned LBM Labs public repo
 ---
 <Base>
-  <!-- ── Hero (dark) ─────────────────────────────────────────────── -->
+  <!-- ── Nav ─────────────────────────────────────────────────────── -->
+  <header class="nav">
+    <a class="brand" href={`${base}/`}>LBM&nbsp;Labs</a>
+    <nav>
+      <a href={`${base}/build`}>Build</a>
+      <a href={`${base}/why`}>Why</a>
+      <a href={`${base}/lab`}>Lab</a>
+      <a href={repo}>GitHub&nbsp;↗</a>
+    </nav>
+  </header>
+
+  <!-- ── 1 · Hero (dark) ─────────────────────────────────────────── -->
   <section class="hero" id="main">
-    <iframe
-      class="hero-bg"
-      src={`${base}/prototypes/mycelium-hero.html?bare=1`}
-      title="Living diagram of the Mycelium network"
-      loading="eager"
-    ></iframe>
+    <iframe class="hero-bg" src={`${base}/prototypes/mycelium-hero.html?bare=1`} title="Living diagram of the Mycelium network" loading="eager"></iframe>
     <div class="hero-copy wrap">
       <p class="kicker">LBM Labs — open, public-good infrastructure for understanding the natural world.</p>
       <h1>The network for the Earth.</h1>
@@ -25,14 +36,57 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       no one.</p>
       <div class="ctas">
         <a class="btn-primary" href={`${base}/build`}>Build one</a>
-        <a class="btn-ghost" href="#">Read the code</a>
+        <a class="btn-ghost" href={repo}>Read the code</a>
       </div>
     </div>
     <p class="statusline mono">leaf01 · last reading 3 min ago · temp_c 18.4 ·
       <span class="ok">0 readings lost since deploy</span> · <span class="dim">(sample)</span></p>
   </section>
 
-  <!-- ── Proof I — Free (light / paper) ──────────────────────────── -->
+  <!-- ── 2 · The gap (light) ─────────────────────────────────────── -->
+  <section data-theme="paper">
+    <div class="wrap narrow">
+      <p class="kicker">The gap.</p>
+      <h2>The world is changing faster than we're measuring it.</h2>
+      <p>The people closest to the land — watershed groups, small farms, tribes,
+      researchers, teachers — are priced out of knowing what it's doing.
+      Commercial monitoring stations run past a thousand dollars before the
+      first sensor, plus a data plan every year, so measurement goes where
+      mandates send it and everywhere else declines in the dark. Satellites
+      see broad, not deep.</p>
+      <div class="split">
+        <div class="split-broad" aria-label="A coarse satellite tile — broad, distant"><span>satellite · broad</span></div>
+        <div class="split-deep">
+          <span class="d5-lbl mono">one node · deep</span>
+          <p class="reading mono">2026-06-11 18:23 · leaf01 · temp_c · <span class="ok">18.16</span></p>
+        </div>
+      </div>
+      <p class="dim small">Satellites see broad. This is deep.</p>
+    </div>
+  </section>
+
+  <!-- ── 3 · How it works (dark) ─────────────────────────────────── -->
+  <section>
+    <div class="wrap narrow">
+      <p class="kicker">How it works.</p>
+      <h2>Sense → Mesh → Your data.</h2>
+      <div class="threeup">
+        <div><h3>Sense</h3><p class="small">Any sensor, from a $7 thermistor to
+        a research sonde, plugs into the same node. Readings are sealed with
+        AES-256-GCM the moment they're taken.</p></div>
+        <div><h3>Mesh</h3><p class="small">Every node is designed to relay:
+        nodes find each other over license-free LoRa radio and carry each
+        other's traffic, so your node extends the network for everyone behind
+        it — and the sealed readings stay unreadable at every hop.</p></div>
+        <div><h3>Your data</h3><p class="small">A gateway forwards each sealed
+        reading to the destination its owner chose — today a Google Sheet you
+        own. No platform, no subscription, no one between you and your data.</p></div>
+      </div>
+      <DiagramSenseMesh />
+    </div>
+  </section>
+
+  <!-- ── 4 · Free (light) ────────────────────────────────────────── -->
   <section data-theme="paper">
     <div class="wrap narrow">
       <p class="kicker">Free. Actually free.</p>
@@ -43,6 +97,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       There is no markup and no subscription anywhere in the stack: the design
       is free, the radio band is license-free, and your data lands somewhere
       you already own.</p>
+      <ChartCost />
       <div class="evidence" role="img" aria-label="Bill of materials receipt for one Mycelium bench leaf, totaling about $176">
 <span class="lbl">bom · bench leaf · renders from the repo</span>Raspberry Pi Zero 2 W + microSD .... $32
 TTGO LoRa32 + 915 MHz antenna ...... $25
@@ -56,7 +111,38 @@ TOTAL .......................... <span class="ok">~$176</span></div>
     </div>
   </section>
 
-  <!-- ── Proof IV — Reliability (dark) ───────────────────────────── -->
+  <!-- ── 5 · Reach (dark) ────────────────────────────────────────── -->
+  <section>
+    <div class="wrap narrow">
+      <p class="kicker">Reach.</p>
+      <h2>Built for the places cell towers never reached.</h2>
+      <p>The valleys, forests, and rangelands that need monitoring most are
+      exactly where coverage ends — where the only commercial answer has been a
+      satellite subscription. Mycelium's answer is the mesh itself: every node
+      is designed to relay by default, so each sensor anyone deploys is meant to
+      carry the network further. It's designed so that a node on the ridgeline
+      brings the canyon behind it online — coverage compounding by addition, not
+      infrastructure. (We'll publish real range once it's field-tested; until
+      then the picture below is schematic.)</p>
+      <DiagramTerrain />
+    </div>
+  </section>
+
+  <!-- ── 6 · Encryption (dark) ───────────────────────────────────── -->
+  <section>
+    <div class="wrap narrow">
+      <p class="kicker">Your data stays yours.</p>
+      <h2>The relays can't read what they carry.</h2>
+      <p>Every reading is encrypted on the sensor node and decrypted only at its
+      owner's destination — the mesh in between, including whoever runs the
+      gateway, sees ciphertext and a delivery address. That's not a policy; it's
+      the architecture. Strangers' networks can strengthen each other without
+      sharing anything but radio waves.</p>
+      <PanelCiphertext />
+    </div>
+  </section>
+
+  <!-- ── 7 · Reliability (dark) ──────────────────────────────────── -->
   <section>
     <div class="wrap narrow">
       <p class="kicker">Built like infrastructure, not a gadget.</p>
@@ -84,49 +170,132 @@ DRILL PASS</div>
       The drills ship in the repo — run them yourself.</p>
     </div>
   </section>
+
+  <!-- ── 8 · Open by default (light) ─────────────────────────────── -->
+  <section data-theme="paper">
+    <div class="wrap narrow">
+      <p class="kicker">Open by default.</p>
+      <h2>Don't trust us. Check.</h2>
+      <p>Everything is public: the firmware, the node and gateway software, the
+      destination code, the parts list, the roadmap. The test suite runs on any
+      laptop, and the failure drills that back the claims above are scripts in
+      the repo — the evidence is re-runnable, not just readable.</p>
+      <div class="evidence" role="img" aria-label="Terminal: 168 tests passed">
+<span class="lbl">$ pytest</span>........................................................
+<span class="ok">168 passed</span> in 0.33s</div>
+      <p class="links small mono"><a href={repo}>Repo&nbsp;↗</a> · <a href={`${base}/build`}>Build guide</a> · <a href={repo}>Roadmap</a></p>
+      <p class="dim small">Apache-2.0 (code) · CC BY 4.0 (docs &amp; hardware)</p>
+    </div>
+  </section>
+
+  <!-- ── 9 · Roadmap (dark) ──────────────────────────────────────── -->
+  <section>
+    <div class="wrap narrow">
+      <p class="kicker">Where this is going.</p>
+      <ol class="roadmap mono">
+        <li class="done">bench network running end to end <span class="ok">✓</span></li>
+        <li>field hardware testing</li>
+        <li>zero-terminal setup app</li>
+        <li>fleet dashboards</li>
+      </ol>
+      <p class="dim small">All of it public, all of it free.</p>
+    </div>
+  </section>
+
+  <!-- ── 10 · Mission (dark) ─────────────────────────────────────── -->
+  <section class="mission">
+    <div class="wrap narrow">
+      <p class="kicker">Knowing shouldn't be a luxury.</p>
+      <h2>Protecting anything starts with knowing what's happening to it.</h2>
+      <p>And for most of the living world, nobody is measuring. Mycelium exists
+      to make the measuring cheap, trustworthy, and unowned, so the small places
+      get watched too.</p>
+      <p>It's named for the network under the forest floor: invisible
+      infrastructure that connects living things, moves what's needed to where
+      it's needed, and belongs to no one in particular.</p>
+      <div class="ctas">
+        <a class="btn-primary" href={`${base}/build`}>Build one</a>
+        <a class="btn-ghost" href={repo}>Read the code</a>
+        <a class="storylink" href={`${base}/why`}>the story behind Mycelium →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ──────────────────────────────────────────────────── -->
+  <footer class="foot">
+    <div class="wrap narrow">
+      <nav class="foot-links">
+        <a href={`${base}/build`}>Build</a> · <a href={`${base}/why`}>Why</a> ·
+        <a href={`${base}/lab`}>Lab</a> · <a href={repo}>GitHub&nbsp;↗</a> ·
+        <a href="mailto:hello@lbmlabs.org">Email</a>
+      </nav>
+      <p class="brandline">LBM Labs builds open, public-good infrastructure for understanding the natural world.</p>
+      <p class="dim small mono">Apache-2.0 · CC BY 4.0 · No analytics on this site — we don't watch you read about watching creeks.</p>
+    </div>
+  </footer>
 </Base>
 
 <style>
-  .hero {
-    position: relative;
-    min-height: 100svh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    overflow: hidden;
-    padding-block: 0;
+  /* nav */
+  .nav {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--s-3) 8vw;
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--t-small);
   }
-  .hero-bg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-    z-index: 0;
-  }
-  .hero-copy {
-    position: relative;
-    z-index: 1;
-    padding: 0 8vw;
-    pointer-events: none; /* clicks fall through to the animation (kill a node) */
-  }
-  .hero-copy .ctas { pointer-events: auto; } /* …except the CTAs */
+  .nav .brand { font-weight: 600; color: var(--ink); }
+  .nav nav { display: flex; gap: var(--s-5); }
+  .nav nav a { color: var(--dim); }
+  .nav nav a:hover { color: var(--accent); text-decoration: none; }
+
+  /* hero */
+  .hero { position: relative; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; overflow: hidden; padding-block: 0; margin-top: -49px; }
+  .hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; z-index: 0; }
+  .hero-copy { position: relative; z-index: 1; padding: 0 8vw; pointer-events: none; }
+  .hero-copy .ctas { pointer-events: auto; }
   .hero .kicker { opacity: 0.9; }
   .hero h1 { margin-bottom: 1.1rem; }
-  .hero .sub {
-    font-size: clamp(1rem, 1.6vw, 1.2rem);
-    color: var(--dim);
-    max-width: 52ch;
-    margin-bottom: var(--s-5);
-  }
-  .statusline {
-    position: absolute;
-    left: 8vw;
-    bottom: 4vh;
-    z-index: 1;
-    font-size: var(--t-small);
-    color: var(--dim);
-    pointer-events: none;
-  }
+  .hero .sub { font-size: clamp(1rem, 1.6vw, 1.2rem); color: var(--dim); max-width: 52ch; margin-bottom: var(--s-5); }
+  .statusline { position: absolute; left: 8vw; bottom: 4vh; z-index: 1; font-size: var(--t-small); color: var(--dim); pointer-events: none; }
   .statusline .ok { color: var(--accent); }
+
+  /* §2 split */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); margin: var(--s-5) 0 var(--s-3); }
+  .split > div { border: 1px solid var(--rule); border-radius: var(--r-md); min-height: 150px; padding: var(--s-4); display: flex; flex-direction: column; justify-content: flex-end; }
+  .split-broad { background:
+    repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ink-dark) 8%, transparent) 0deg 90deg, transparent 90deg 180deg) 0 0 / 28px 28px,
+    linear-gradient(135deg, #cfd6c6, #b9c3b0); color: var(--ink-dark); }
+  .split-broad span { font-family: var(--font-mono); font-size: 12px; opacity: 0.8; }
+  .split-deep { background: var(--section-raise); }
+  .split-deep .reading { font-size: 1.05rem; margin: var(--s-2) 0 0; color: var(--text); }
+  .split-deep .ok { color: var(--accent-deep); }
+
+  /* §3 three-up */
+  .threeup { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5); margin: var(--s-5) 0; }
+  .threeup h3 { color: var(--accent); margin-bottom: var(--s-2); }
+  .threeup p { color: var(--text-dim); }
+
+  /* §9 roadmap */
+  .roadmap { list-style: none; padding: 0; margin: var(--s-5) 0 var(--s-3); display: flex; flex-wrap: wrap; gap: var(--s-3); }
+  .roadmap li { border: 1px solid var(--rule); border-radius: var(--r-pill); padding: 8px 14px; color: var(--text-dim); font-size: var(--t-small); }
+  .roadmap li.done { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  .roadmap .ok { color: var(--accent); }
+
+  /* mission + footer */
+  .mission .ctas { align-items: center; }
+  .storylink { color: var(--dim); font-size: var(--t-small); }
+  .foot { background: var(--bg); border-top: 1px solid var(--line); padding: var(--s-7) 8vw; }
+  .foot-links { color: var(--dim); margin-bottom: var(--s-4); }
+  .foot-links a { color: var(--dim); }
+  .foot-links a:hover { color: var(--accent); }
+  .brandline { color: var(--ink); max-width: 60ch; margin-bottom: var(--s-3); }
+  .links a { color: var(--accent); }
+
+  @media (max-width: 720px) {
+    .split, .threeup { grid-template-columns: 1fr; }
+    .nav nav { gap: var(--s-4); }
+  }
 </style>
