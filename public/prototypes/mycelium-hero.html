@@ -117,6 +117,8 @@
   }
   @keyframes hintBreathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { #hint { animation: none; opacity: .8; } }
+  /* ?bare — embed just the living animation (no panel/copy) as a hero background */
+  .bare .panel, .bare .badge, .bare .hero, .bare .statusline, .bare .reduced-note { display: none !important; }
 </style>
 </head>
 <body>
@@ -198,6 +200,11 @@
    (cheap); nodes, gateways, and pulses draw per-frame with additive
    blending. Routing recompute is O(n²), run a few times/second.
    ════════════════════════════════════════════════════════════════ */
+
+// ?bare → hide the panel + sample copy so the page is just the living
+// animation, embeddable as a hero background (the real site overlays its
+// own copy on top). The engine runs unchanged.
+if (location.search.includes("bare")) document.body.classList.add("bare");
 
 const canvas = document.getElementById("field");
 const ctx = canvas.getContext("2d");

@@ -1,31 +1,132 @@
 ---
-// Placeholder index while the site is built out (launch plan Phase E).
-// The real homepage spec: Mycelium repo, docs/website-concept.md.
+import Base from "../layouts/Base.astro";
+/* D7 review build: the hero animation + one light section + one dark
+   section, in the real design system (tokens + Fraunces/Inter/Plex Mono).
+   Copy is the locked B1 draft with the B7 claims-gate fixes applied
+   (F4 "node restart", F5 H2 drops "in the field"). Hero animation is the
+   tuned prototype embedded via ?bare; E2 will extract it into a component.
+   Evidence blocks here are illustrative — real ones come from C2/C6. */
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 ---
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <title>LBM Labs</title>
-    <style>
-      body {
-        margin: 0; min-height: 100vh; display: grid; place-items: center;
-        background: #0c120e; color: #e8f3ec;
-        font: 16px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
-      }
-      main { text-align: center; padding: 2rem; }
-      h1 { font-weight: 500; letter-spacing: 0.02em; }
-      a { color: #9ff5c9; }
-      p { color: #8aa194; }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>LBM Labs</h1>
-      <p>A public-good lab. Site under construction.</p>
-      <p><a href={`${base}/prototypes/mycelium-hero.html`}>hero animation prototype →</a></p>
-    </main>
-  </body>
-</html>
+<Base>
+  <!-- ── Hero (dark) ─────────────────────────────────────────────── -->
+  <section class="hero" id="main">
+    <iframe
+      class="hero-bg"
+      src={`${base}/prototypes/mycelium-hero.html?bare=1`}
+      title="Living diagram of the Mycelium network"
+      loading="eager"
+    ></iframe>
+    <div class="hero-copy wrap">
+      <p class="kicker">LBM Labs — open, public-good infrastructure for understanding the natural world.</p>
+      <h1>The network for the Earth.</h1>
+      <p class="sub">Mycelium is a free, open, encrypted telemetry mesh anyone
+      can build — ground truth for the places that need protecting, owned by
+      no one.</p>
+      <div class="ctas">
+        <a class="btn-primary" href={`${base}/build`}>Build one</a>
+        <a class="btn-ghost" href="#">Read the code</a>
+      </div>
+    </div>
+    <p class="statusline mono">leaf01 · last reading 3 min ago · temp_c 18.4 ·
+      <span class="ok">0 readings lost since deploy</span> · <span class="dim">(sample)</span></p>
+  </section>
+
+  <!-- ── Proof I — Free (light / paper) ──────────────────────────── -->
+  <section data-theme="paper">
+    <div class="wrap narrow">
+      <p class="kicker">Free. Actually free.</p>
+      <h2>Not discounted. Not freemium. No markup.</h2>
+      <p>Mycelium is a public good. The complete design — parts list, firmware,
+      software, assembly guides — is published, and you build a node from
+      off-the-shelf parts: Raspberry Pi, commodity LoRa radio, standard cables.
+      There is no markup and no subscription anywhere in the stack: the design
+      is free, the radio band is license-free, and your data lands somewhere
+      you already own.</p>
+      <div class="evidence" role="img" aria-label="Bill of materials receipt for one Mycelium bench leaf, totaling about $176">
+<span class="lbl">bom · bench leaf · renders from the repo</span>Raspberry Pi Zero 2 W + microSD .... $32
+TTGO LoRa32 + 915 MHz antenna ...... $25
+EnviroDIY Mayfly v1.1 + cable ...... $84
+Grove temperature sensor ........... $ 8
+LED + breadboard + jumpers ......... $ 3
+project box · misc ................. $24
+———————————————————————————————————————
+TOTAL .......................... <span class="ok">~$176</span></div>
+      <p class="dim small">Price it yourself — this list renders straight from the repo.</p>
+    </div>
+  </section>
+
+  <!-- ── Proof IV — Reliability (dark) ───────────────────────────── -->
+  <section>
+    <div class="wrap narrow">
+      <p class="kicker">Built like infrastructure, not a gadget.</p>
+      <h2>Reliability and survivability are the core of the Mycelium architecture.</h2>
+      <p>Every reading is committed to disk the moment it's taken and deleted
+      only after its destination cryptographically confirms receipt. Outages
+      buffer and drain. Nodes watch themselves — and recover from wedges,
+      crashes, and even a radio knocked off the bus, on their own.</p>
+      <p>We verify all of it by sabotaging our own bench network with scripted
+      failure drills:</p>
+      <div class="badges">
+        <span class="badge">gateway outage ✓</span>
+        <span class="badge">node restart ✓</span>
+        <span class="badge">destination blackhole ✓</span>
+        <span class="badge">radio drop ✓</span>
+      </div>
+      <p class="small"><strong>Zero readings lost.</strong></p>
+      <div class="evidence" role="img" aria-label="Failure drill output ending in zero readings lost">
+<span class="lbl">$ ./scripts/drills/drill-gateway-outage.sh</span>↯ gateway killed mid-batch
+· leaf buffering to disk … 7 readings queued
+· gateway back · draining queue …
+✓ all 7 delivered · <span class="ok">0 readings lost</span>
+DRILL PASS</div>
+      <p class="dim small">A real drill run against the real (bench) network, June 2026.
+      The drills ship in the repo — run them yourself.</p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    padding-block: 0;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    z-index: 0;
+  }
+  .hero-copy {
+    position: relative;
+    z-index: 1;
+    padding: 0 8vw;
+    pointer-events: none; /* clicks fall through to the animation (kill a node) */
+  }
+  .hero-copy .ctas { pointer-events: auto; } /* …except the CTAs */
+  .hero .kicker { opacity: 0.9; }
+  .hero h1 { margin-bottom: 1.1rem; }
+  .hero .sub {
+    font-size: clamp(1rem, 1.6vw, 1.2rem);
+    color: var(--dim);
+    max-width: 52ch;
+    margin-bottom: var(--s-5);
+  }
+  .statusline {
+    position: absolute;
+    left: 8vw;
+    bottom: 4vh;
+    z-index: 1;
+    font-size: var(--t-small);
+    color: var(--dim);
+    pointer-events: none;
+  }
+  .statusline .ok { color: var(--accent); }
+</style>
