@@ -30,10 +30,27 @@ const repo = "#"; // A7
 
       <p class="solo dim">LBM Labs is one person right now — plus whoever shows up in the issues.</p>
 
-      <h2>How to follow or help</h2>
+      <h2>Who's behind it</h2>
+      <div class="bio">
+        <p>That person is <strong>Conor McCaulley</strong>, based in Berkeley. I
+        studied an individual, self-designed degree at UCLA — a BS in <em>Green
+        Technology Design and Management</em>, cum laude, built across computer
+        science, environmental science, and management — and wrote my thesis on
+        applying remote sensing and small-scale robotics to the sustainability
+        and viability of urban agriculture. Most of what came after has been
+        self-taught: custom water-quality monitoring hardware and software for my
+        aquaponics system, the data work that goes with it (cleaning,
+        visualization, and model training in numpy, pandas, scikit-learn, and
+        matplotlib), and now Mycelium.</p>
+        <p>It's the same throughline as the creek — building the instruments that
+        measure what's happening to the living world, and working the data they
+        produce.</p>
+      </div>
+
+      <h2>Get in touch</h2>
       <ul class="contact">
+        <li><span class="ck mono">Email</span> <a href="mailto:conormccaulley@gmail.com">conormccaulley@gmail.com</a></li>
         <li><span class="ck mono">GitHub</span> <a href={repo}>the repo&nbsp;↗</a> — the work happens in the open; watch it, file issues, send patches.</li>
-        <li><span class="ck mono">Email</span> <a href="mailto:hello@lbmlabs.org">hello@lbmlabs.org</a> — for everything else.</li>
       </ul>
       <p class="aside dim small">No newsletter, no socials to follow, no analytics
       on this site. If the work is good, the repo history will say so.</p>
@@ -51,6 +68,9 @@ const repo = "#"; // A7
   .statement a { color: var(--accent); }
   .solo { margin-top: var(--s-4); font-size: var(--t-small); max-width: 56ch; }
   .lab h2 { margin-top: var(--s-7); font-size: var(--t-h3); }
+  .bio p { font-size: var(--t-body); line-height: 1.7; max-width: 64ch; color: var(--ink); }
+  .bio strong { color: var(--accent); }
+  .bio em { font-style: italic; color: var(--ink); }
   .contact { list-style: none; padding: 0; margin: var(--s-4) 0; display: grid; gap: var(--s-3); }
   .contact li { color: var(--dim); }
   .contact .ck { display: inline-block; min-width: 5rem; color: var(--accent); font-size: var(--t-small); }
