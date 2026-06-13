@@ -231,10 +231,11 @@ const P = {
   // travel time (linkGrowSpeed) supplies most of the organic delay.
   regrowLossMin: 0.1, regrowLossMax: 0.5,
   regrowNewMin: 0.02, regrowNewMax: 0.18,
-  linkGrowSpeed: 130,  // px/sec a connection strand crawls toward its target
-  linkWander: 0.4,     // a gentle waver on an essentially straight reach
-  linkTurnCap: 0.03,   // max rad/step of curl — keeps it close to straight
-  linkHoming: 1.7,     // pull toward target — firm enough to keep the line near-straight
+  linkGrowSpeed: 130,  // px/sec a connection strand reaches toward its target
+  linkWander: 0.55,    // how hard the soil-density field deflects the path
+  soilScale: 0.05,     // spatial frequency of the "soil" field (1/px) — smaller = longer waves
+  linkTurnCap: 0.05,   // clamp on the per-step soil deflection
+  linkHoming: 1.7,     // pull toward target — keeps the reach near-straight overall
 };
 
 // ── state ─────────────────────────────────────────────────────────
@@ -255,6 +256,25 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const dist2 = (ax, ay, bx, by) => { const dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; };
+
+// A fixed spatial value-noise field standing in for "soil density": the
+// growing strand is deflected by it, so its path threads the way a root
+// finds least resistance — irregular slight waver, not a clean curve.
+function hashNoise(ix, iy) {
+  let h = (ix | 0) * 374761393 + (iy | 0) * 668265263;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return ((h >>> 0) / 4294967295) * 2 - 1;
+}
+const smooth01 = t => t * t * (3 - 2 * t);
+function soilNoise(x, y) {
+  const x0 = Math.floor(x), y0 = Math.floor(y);
+  const sx = smooth01(x - x0), sy = smooth01(y - y0);
+  const v00 = hashNoise(x0, y0), v10 = hashNoise(x0 + 1, y0);
+  const v01 = hashNoise(x0, y0 + 1), v11 = hashNoise(x0 + 1, y0 + 1);
+  const a = v00 + (v10 - v00) * sx, b = v01 + (v11 - v01) * sx;
+  return a + (b - a) * sy;
+}
 function aliveCount(gw) { let c = 0; for (const n of nodes) if (n.alive && !!n.isGateway === gw) c++; return c; }
 function gatewayCount() { return aliveCount(true); }
 
@@ -322,8 +342,8 @@ function retract(geom, now) { if (geom) retracting.push({ pts: geom.pts, t0: now
 
 function startGrow(i, target) {
   const n = nodes[i], t = nodes[target];
-  n.grow = { target, tx: n.x, ty: n.y, len: 0, d0: Math.hypot(t.x - n.x, t.y - n.y), turn: rand(-0.05, 0.05),
-             pts: [[n.x, n.y]], dir: Math.atan2(t.y - n.y, t.x - n.x) + rand(-0.35, 0.35) };
+  n.grow = { target, tx: n.x, ty: n.y, len: 0, d0: Math.hypot(t.x - n.x, t.y - n.y),
+             pts: [[n.x, n.y]], dir: Math.atan2(t.y - n.y, t.x - n.x) + rand(-0.3, 0.3) };
 }
 // Advance every growing strand toward its target with a little organic
 // wobble; establish the link when it arrives (make-before-break).
@@ -337,15 +357,18 @@ function stepLinkGrowth(dt, now) {
     // crawl: a heading random-walk (like the original hyphae) with only a
     // gentle homing pull toward the target — it wanders, then curves in to
     // land. Homing firms up close to the target so a strand always arrives.
-    // a smooth, persistent turn rate (damped random-walk) makes sustained
-    // curves instead of cancelling jitter; weak homing lets the crawl show,
-    // firming up near the target so the strand always lands.
-    g.turn = clamp(g.turn * 0.9 + rand(-1, 1) * P.linkWander * dt, -P.linkTurnCap, P.linkTurnCap);
+    // soil resistance: a fixed spatial noise field deflects the strand, so
+    // it threads the path of least resistance — slight, irregular waver
+    // along its length rather than one clean mathematical curve. Weak
+    // homing keeps it near-straight overall, firming up near the target.
     const want = Math.atan2(t.y - g.ty, t.x - g.tx);
     let d = want - g.dir; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
     const dist = Math.hypot(t.x - g.tx, t.y - g.ty);
     const homing = Math.min(1, dt * P.linkHoming) * (dist < P.range * 0.55 ? 3.5 : 1);
-    g.dir += g.turn + d * homing;
+    const sc = P.soilScale;
+    const soil = soilNoise(g.tx * sc, g.ty * sc) * 0.7
+               + soilNoise(g.tx * sc * 2.7 + 31.7, g.ty * sc * 2.7 + 11.3) * 0.3;
+    g.dir += d * homing + clamp(soil * P.linkWander, -P.linkTurnCap, P.linkTurnCap);
     g.tx += Math.cos(g.dir) * step; g.ty += Math.sin(g.dir) * step;
     g.pts.push([g.tx, g.ty]); g.len += step;
     if (dist2(g.tx, g.ty, t.x, t.y) < mr2) {            // arrived → establish
