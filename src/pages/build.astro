@@ -11,6 +11,7 @@ const repo = "#";          // A7
 const bom = "#";           // bom.md deep link
 const guide = `${base}/build/bench-leaf`;  // the rendered bench-leaf guide
 const gatewayGuide = `${base}/build/gateway`;  // the rendered gateway guide
+const pairingGuide = `${base}/build/pairing`;  // the rendered pairing guide
 const arch = "#";          // hardware-architecture deep link
 const issues = "#";        // repo issues
 const tiers = [
@@ -33,8 +34,8 @@ const tiers = [
     aside: "Kill the gateway's power mid-batch and the leaf buffers to disk, then drains everything when it returns — the failure drills in the repo run that sabotage for you.",
     rows: [
       ["Parts", "a Pi + the LoRa radio", gatewayGuide],
-      ["Guide", "build + pair the gateway", gatewayGuide],
-      ["You'll have", "a working network: sense → mesh → deliver", null],
+      ["Guide", "build the gateway", gatewayGuide],
+      ["Then", "pair it with your leaf", pairingGuide],
     ],
     rule: null,
   },
@@ -100,7 +101,7 @@ const tiers = [
 
   <section class="connect">
     <div class="wrap narrow">
-      <p class="connect-line">Built a leaf and a gateway? <a href={gatewayGuide.replace("/gateway", "/pairing")}>Pair them →</a> — one identity hash, and the network comes alive.</p>
+      <p class="connect-line">Built a leaf and a gateway? <a href={pairingGuide}>Pair them →</a> — one identity hash, and the network comes alive.</p>
     </div>
   </section>
 
