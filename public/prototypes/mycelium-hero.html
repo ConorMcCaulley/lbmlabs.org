@@ -149,6 +149,8 @@
   <label>pulse speed <span class="val" id="vSpd"></span><input type="range" id="pSpd" min="50" max="380" value="165"></label>
   <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="21"></label>
   <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="15"></label>
+  <label>wander <span class="val" id="vWander"></span><input type="range" id="pWander" min="0" max="150" value="55"></label>
+  <label>texture <span class="val" id="vTexture"></span><input type="range" id="pTexture" min="5" max="120" value="50"></label>
   <div class="row">
     <button id="bKill" title="or click any node directly">kill a node</button>
     <button id="bReset">reset</button>
@@ -855,6 +857,8 @@ const SLIDERS = [
   ["pSpd", "vSpd", "pulseSpeed", 1],
   ["pPull", "vPull", "cursorPull", 0.01],
   ["pGlow", "vGlow", "glow", 0.01],
+  ["pWander", "vWander", "linkWander", 0.01],   // soil deflection strength
+  ["pTexture", "vTexture", "soilScale", 0.001], // soil field spatial frequency
 ];
 const saved = JSON.parse(localStorage.getItem("mycelium-tuning") || "{}");
 for (const [id, vid, key, scale] of SLIDERS) {
