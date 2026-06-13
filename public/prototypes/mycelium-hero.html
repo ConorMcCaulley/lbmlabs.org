@@ -152,7 +152,7 @@
   <div class="row">
     <button id="bKill" title="or click any node directly">kill a node</button>
     <button id="bReset">reset</button>
-    <button id="bLit">lit: relay path</button>
+    <button id="bLit">lit: source stays</button>
     <button id="bOverlay">copy on/off</button>
     <button id="bStatic">reduced-motion preview</button>
     <button id="bCopy">copy settings</button>
@@ -247,10 +247,11 @@ let retracting = []; // {pts,t0} — links fading out after a break/upgrade
 let mouse = { x: -1e4, y: -1e4 };
 let lastDeath = 0, lastPulse = 0, lastGateway = 0, lastRoute = 0;
 let routeDirty = true, running = true, staticMode = false;
-// "relay": a node stays lit after any reading passes through it (the active
-// paths illuminate). "source": a node stays lit only when it generates its
-// own reading. Toggled in the panel.
-let litMode = "relay";
+// Lit persistence (toggled in the panel). Relays ALWAYS just pulse briefly
+// as they receive + retransmit — never stay lit. The toggle only controls
+// the reading SOURCE: "stay" = the node that generates a reading stays lit;
+// "pulse" = nothing persists, every node only pulses as readings pass.
+let litMode = "stay";
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -579,7 +580,7 @@ function spawnPulse() {
   if (!path) return;
   pulses.push({ path, seg: 0, t: 0, speed: P.pulseSpeed * rand(0.9, 1.1) });
   nodes[pick].lit = 1;
-  nodes[pick].glowOn = true;               // the node that generated the reading
+  if (litMode === "stay") nodes[pick].glowOn = true;  // reading source stays lit (in 'stay' mode)
 }
 function stepPulses(dt) {
   for (let i = pulses.length - 1; i >= 0; i--) {
@@ -610,9 +611,8 @@ function stepPulses(dt) {
     if (p.t >= link.len) {                               // arrived at the next node
       if (nodes[b].isGateway) {
         nodes[b].lit = 1.8;         // gateway always flares on delivery
-      } else if (litMode === "relay") {
-        nodes[b].lit = 1;           // relay moment — lights only in relay mode
-        nodes[b].glowOn = true;
+      } else {
+        nodes[b].lit = 1;           // relay pulses as it receives + retransmits — no persist
       }
       p.seg++; p.t = 0;
       if (nodes[b].isGateway || p.seg >= p.path.length - 1) pulses.splice(i, 1);
@@ -897,11 +897,11 @@ document.getElementById("bStatic").onclick = () => growStatic();
 
 // lit-mode toggle: persist choice; clear existing glow so the new mode
 // builds up from scratch and the change reads immediately
-litMode = localStorage.getItem("mycelium-litmode") || "relay";
+litMode = localStorage.getItem("mycelium-litmode") === "pulse" ? "pulse" : "stay";
 const litBtn = document.getElementById("bLit");
-function updateLitBtn() { litBtn.textContent = litMode === "relay" ? "lit: relay path" : "lit: source only"; }
+function updateLitBtn() { litBtn.textContent = litMode === "stay" ? "lit: source stays" : "lit: pulse only"; }
 litBtn.onclick = () => {
-  litMode = litMode === "relay" ? "source" : "relay";
+  litMode = litMode === "stay" ? "pulse" : "stay";
   localStorage.setItem("mycelium-litmode", litMode);
   for (const n of nodes) n.glowOn = false;
   updateLitBtn();
