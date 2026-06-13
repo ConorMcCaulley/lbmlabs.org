@@ -1,0 +1,157 @@
+---
+import Base from "../../layouts/Base.astro";
+import SiteNav from "../../components/SiteNav.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
+/* Build guide — the bench leaf (Tier 1). Rendered from the repo's
+   bench-build-v0.5.md; the repo stays the source of truth (links land at
+   A7). Voice: It/I, instructional second-person for the reader. */
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const repo = "#"; // A7
+const parts = [
+  ["Raspberry Pi Zero 2 W + 32 GB high-endurance microSD", "$32", "the node's computer"],
+  ["Official 5 V 2.5 A micro-USB supply", "$8", "into the PWR IN port"],
+  ["Micro-USB OTG adapter", "$3", "into the USB (data) port"],
+  ["2-port USB 2.0 hub", "$5", "bus-powered is fine on the 2.5 A supply"],
+  ["LILYGO TTGO LoRa32 v2.1 + 915 MHz antenna", "$25", "the radio — never power without the antenna"],
+  ["SMA male → SMA female bulkhead cable (RG316, ~20 cm)", "$8", "panel-mounts the antenna"],
+  ["EnviroDIY Mayfly v1.1", "$80", "the sensor brain"],
+  ["USB-A → USB-C cable (short)", "$4", "hub → Mayfly: power + serial"],
+  ["Seeed Grove Temperature Sensor v1.2", "$7", "NTC thermistor, zero wiring"],
+  ["Grove cable", "$1", "usually ships with the sensor"],
+  ["LED + ~330 Ω resistor + breadboard + 2 jumpers", "$3", "status LED on GPIO 17"],
+  ["Plastic project box", "on hand", "it all goes in here"],
+];
+const topology = `5V 2.5A supply ──► [PWR IN]   (power pins only — no data)
+
+[USB] ── OTG adapter ── 2-port hub ──┬── TTGO LoRa32  → /dev/rnode
+                                     └── Mayfly v1.1  → /dev/mayfly
+
+GPIO 17 ── 330 Ω ── LED ── GND       (breadboard)
+
+Mayfly AA0/AA1 Grove socket ── Grove cable ── Grove temp sensor`;
+const steps = [
+  { h: "Flash the Mayfly", b: "In the Arduino IDE, add the board package <em>EnviroDIY ATmega Boards</em> → <em>EnviroDIY Mayfly 1284P</em> and the <em>Adafruit ADS1X15</em> library. Open the Grove-temp sketch, read its PORT CONFIG header, and upload. With the Grove sensor in the <strong>AA0/AA1 aux-analog socket</strong> (Grove power jumper at 3.3 V), the Serial Monitor at 115200 should show a <code>$MYC,…</code> line every 10 s and the green LED blinking per line — <code>temp_c</code> near your thermostat's opinion." },
+  { h: "Set up the Pi", b: "Flash Pi OS Lite 64-bit, clone the repo, run <code>leaf/setup.sh</code>, and do the key + <code>config.toml</code> steps it prints — including <code>sensor = \"mayfly\"</code> in <code>/etc/mycelium-network-leaf/config.toml</code>. Reboot." },
+  { h: "Plug the chain together", b: "Wire it per the topology above, then verify both serial devices appear: <code>ls -la /dev/rnode /dev/mayfly</code>. (udev pins each by chip, so hub port order never matters.)" },
+  { h: "Start and watch", b: "<code>sudo systemctl start rnsd leaf-node</code>, then <code>journalctl -u leaf-node -f</code>. You should see gateway discovery, then <code>sampled: temp_c=21.340 (queue depth 1)</code>, then <code>delivered 1 reading(s)…</code> — and a <code>temp_c</code> row in your Sheet." },
+];
+---
+<Base title="Build guide — the bench leaf" description="Step-by-step: build a Mycelium bench leaf from off-the-shelf parts in an afternoon. A $7 thermometer to an encrypted reading in your own spreadsheet.">
+  <SiteNav current="build" />
+
+  <article class="guide" id="main">
+    <div class="wrap narrow">
+      <p class="crumb mono"><a href={`${base}/build`}>← Build</a> · guide</p>
+      <h1>The bench leaf</h1>
+      <p class="meta mono">~$176 · an afternoon · no soldering</p>
+      <p class="lede">The smallest build that exercises the entire real pipeline:
+      a Grove thermistor → a Mayfly logger → your Pi (which seals each reading
+      with AES-256-GCM) → the LoRa radio → your gateway → a spreadsheet you own,
+      with a status LED blinking through it all. USB wall power, no solar, no
+      enclosure. Its job is to teach you the whole system on the bench before any
+      expensive sonde is on the line.</p>
+
+      <h2>Parts</h2>
+      <table class="parts mono">
+        <tbody>
+          {parts.map(([p, c, n]) => (
+            <tr><td>{p}</td><td class="cost">{c}</td><td class="note">{n}</td></tr>
+          ))}
+          <tr class="total"><td>Total</td><td class="cost">~$176</td><td></td></tr>
+        </tbody>
+      </table>
+
+      <h2>Wiring</h2>
+      <p>The Pi Zero 2 W has two micro-USB ports and only one carries data:</p>
+      <pre class="evidence mono">{topology}</pre>
+      <p class="callout mono">⚠ Never power the radio without its antenna attached
+      — transmitting into nothing can kill the TTGO. With the antenna on a
+      bulkhead through the box wall, "attached" becomes the box's resting state.</p>
+      <p class="dim small">Connector note: LoRa boards are normally standard
+      <strong>SMA</strong> (board jack with a centre socket) — not RP-SMA, which
+      looks identical in photos and won't mate. Verified June 2026: these boards
+      are standard SMA. Order plain SMA.</p>
+
+      <h2>Build steps</h2>
+      <ol class="steps">
+        {steps.map((s) => (
+          <li>
+            <h3>{s.h}</h3>
+            <p set:html={s.b}></p>
+          </li>
+        ))}
+      </ol>
+
+      <div class="prove">
+        <h3>Prove it's real</h3>
+        <p>Pinch the thermistor between two fingers for a minute. The next samples
+        should climb a few degrees. That wiggle in your spreadsheet is the whole
+        pipeline, end to end, measuring an actual thing.</p>
+      </div>
+
+      <h2>Troubleshooting</h2>
+      <ul class="trouble">
+        <li><strong>No <code>/dev/mayfly</code>:</strong> run <code>lsusb</code> — if the Mayfly's chip isn't <code>10c4:ea60</code>, adjust the udev rule in <code>leaf/setup.sh</code>.</li>
+        <li><strong><code>no valid MSAI line within 45s</code>:</strong> Mayfly unpowered (check the hub), unflashed, or its cable is power-only. Open the port by hand: <code>python3 -m serial.tools.miniterm /dev/mayfly 115200</code>.</li>
+        <li><strong>Readings but wrong temperature:</strong> the Grove power jumper is at 5 V while the math assumes 3.3 V — flip the jumper.</li>
+      </ul>
+
+      <h2>What this proves — and what it doesn't</h2>
+      <p><strong>Proves:</strong> the full encrypted pipeline end to end, the
+      sensor-protocol contract across two independent implementations, named
+      multi-parameter readings, and the whole reliability stack under a real
+      sensor.</p>
+      <p class="dim"><strong>Doesn't prove:</strong> power architecture,
+      weatherproofing, SDI-12, or a submersible water-temp probe — those come
+      with the field build and the sonde, once they've survived real weather.</p>
+
+      <div class="ctas">
+        <a class="btn-primary" href={`${base}/build`}>← Back to Build</a>
+        <a class="btn-ghost" href={repo}>Read the code</a>
+      </div>
+    </div>
+  </article>
+
+  <SiteFooter />
+</Base>
+
+<style>
+  .guide { padding: var(--s-8) 8vw var(--s-7); }
+  .crumb { margin-bottom: var(--s-5); }
+  .crumb a { color: var(--accent); }
+  .guide h1 { margin-bottom: var(--s-2); }
+  .meta { color: var(--dim); margin-bottom: var(--s-5); }
+  .lede { font-size: clamp(1.05rem, 1.5vw, 1.2rem); color: var(--dim); max-width: 62ch; }
+  .guide h2 { margin-top: var(--s-7); font-size: var(--t-h3); }
+  .guide p { max-width: 64ch; line-height: 1.7; }
+  .guide code { font-family: var(--font-mono); font-size: 0.86em; color: var(--accent);
+    background: var(--bg-raise); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+  .parts { width: 100%; border-collapse: collapse; margin-top: var(--s-4); font-size: var(--t-small); }
+  .parts td { border-bottom: 1px solid var(--line); padding: var(--s-3) var(--s-3) var(--s-3) 0; vertical-align: top; }
+  .parts .cost { color: var(--accent); white-space: nowrap; text-align: right; width: 4.5rem; }
+  .parts .note { color: var(--dim); }
+  .parts .total td { border-bottom: none; border-top: 1px solid var(--rule); color: var(--ink); padding-top: var(--s-3); }
+
+  .guide .evidence { white-space: pre; }
+  .callout { margin: var(--s-5) 0; padding: var(--s-3) var(--s-4); font-size: var(--t-small);
+    color: var(--amber); border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+    border-radius: var(--r-md); background: color-mix(in srgb, var(--amber) 7%, transparent); max-width: 64ch; }
+
+  .steps { list-style: none; counter-reset: step; padding: 0; margin: var(--s-4) 0; }
+  .steps li { position: relative; padding: 0 0 var(--s-5) var(--s-7); border-left: 1px solid var(--line); margin-left: 12px; }
+  .steps li::before { counter-increment: step; content: counter(step); position: absolute; left: -13px; top: 0;
+    width: 26px; height: 26px; border-radius: var(--r-pill); background: var(--bg-raise);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent);
+    font: 600 13px/26px var(--font-mono); text-align: center; }
+  .steps h3 { margin: 0 0 var(--s-2); font-size: 1.1rem; }
+  .steps li:last-child { border-left-color: transparent; }
+
+  .prove { margin: var(--s-6) 0; padding: var(--s-5); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: var(--r-md); background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .prove h3 { margin: 0 0 var(--s-2); color: var(--accent); }
+
+  .trouble { padding-left: var(--s-5); }
+  .trouble li { margin-bottom: var(--s-3); line-height: 1.6; max-width: 64ch; }
+  .ctas { margin-top: var(--s-7); }
+</style>

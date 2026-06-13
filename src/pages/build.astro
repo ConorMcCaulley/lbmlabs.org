@@ -9,7 +9,7 @@ import SiteFooter from "../components/SiteFooter.astro";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const repo = "#";          // A7
 const bom = "#";           // bom.md deep link
-const guide = "#";         // bench-build deep link
+const guide = `${base}/build/bench-leaf`;  // the rendered bench-leaf guide
 const arch = "#";          // hardware-architecture deep link
 const issues = "#";        // repo issues
 const tiers = [
