@@ -231,8 +231,10 @@ const P = {
   // travel time (linkGrowSpeed) supplies most of the organic delay.
   regrowLossMin: 0.1, regrowLossMax: 0.5,
   regrowNewMin: 0.02, regrowNewMax: 0.18,
-  linkGrowSpeed: 190,  // px/sec a connection strand reaches toward its target
-  linkWander: 1.6,     // rad/s organic wobble while a strand grows
+  linkGrowSpeed: 130,  // px/sec a connection strand crawls toward its target
+  linkWander: 1.4,     // feeds a smooth, persistent turn rate → sustained organic curves
+  linkTurnCap: 0.1,    // max rad/step of curl — high enough to crawl, low enough not to spiral
+  linkHoming: 1.3,     // gentle pull toward target (weak, so the crawl can express)
 };
 
 // ── state ─────────────────────────────────────────────────────────
@@ -320,8 +322,8 @@ function retract(geom, now) { if (geom) retracting.push({ pts: geom.pts, t0: now
 
 function startGrow(i, target) {
   const n = nodes[i], t = nodes[target];
-  n.grow = { target, tx: n.x, ty: n.y, len: 0,
-             pts: [[n.x, n.y]], dir: Math.atan2(t.y - n.y, t.x - n.x) };
+  n.grow = { target, tx: n.x, ty: n.y, len: 0, d0: Math.hypot(t.x - n.x, t.y - n.y), turn: rand(-0.05, 0.05),
+             pts: [[n.x, n.y]], dir: Math.atan2(t.y - n.y, t.x - n.x) + rand(-0.9, 0.9) };
 }
 // Advance every growing strand toward its target with a little organic
 // wobble; establish the link when it arrives (make-before-break).
@@ -332,9 +334,18 @@ function stepLinkGrowth(dt, now) {
     if (!n.alive || !n.grow) continue;
     const g = n.grow, t = nodes[g.target];
     if (!t || !t.alive || !t.connected) { n.grow = null; continue; } // target gone → abandon
+    // crawl: a heading random-walk (like the original hyphae) with only a
+    // gentle homing pull toward the target — it wanders, then curves in to
+    // land. Homing firms up close to the target so a strand always arrives.
+    // a smooth, persistent turn rate (damped random-walk) makes sustained
+    // curves instead of cancelling jitter; weak homing lets the crawl show,
+    // firming up near the target so the strand always lands.
+    g.turn = clamp(g.turn * 0.9 + rand(-1, 1) * P.linkWander * dt, -P.linkTurnCap, P.linkTurnCap);
     const want = Math.atan2(t.y - g.ty, t.x - g.tx);
     let d = want - g.dir; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
-    g.dir += d * Math.min(1, dt * 5) + rand(-1, 1) * P.linkWander * dt;
+    const dist = Math.hypot(t.x - g.tx, t.y - g.ty);
+    const homing = Math.min(1, dt * P.linkHoming) * (dist < P.range * 0.55 ? 3.5 : 1);
+    g.dir += g.turn + d * homing;
     g.tx += Math.cos(g.dir) * step; g.ty += Math.sin(g.dir) * step;
     g.pts.push([g.tx, g.ty]); g.len += step;
     if (dist2(g.tx, g.ty, t.x, t.y) < mr2) {            // arrived → establish
@@ -343,7 +354,7 @@ function stepLinkGrowth(dt, now) {
       n.link = linkGeom(g.pts);
       n.parent = g.target; n.hops = t.hops + 1; n.connected = true; n.lostAt = 0; n.grow = null;
       routeDirty = true;
-    } else if (g.len > P.range * 2.4) { n.grow = null; } // wandered too far → give up, retry next tick
+    } else if (g.len > g.d0 * 2.6 + 30) { n.grow = null; } // crawled too far without landing → retry
   }
 }
 
