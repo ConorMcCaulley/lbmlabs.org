@@ -164,8 +164,12 @@
      2. TRAFFIC — pulses spawn at outlying nodes and hop the graph
                   toward the gateway (BFS shortest path), brightening
                   every node they pass: every node IS a relay.
-     3. EVENTS  — periodic node death; live pulses re-route. The mesh
-                  heals because growth keeps adding paths.
+    3. EVENTS  — periodic node death; live pulses re-route. A severed
+                 section REFORGES: a tip grows straight from its chain
+                 to the nearest connected node (not random regrowth).
+                 Close nodes auto-fuse (anastomosis); long lateral
+                 strands that gain nothing on the gateway route are
+                 PRUNED with an amber retraction.
    Rendering: edges accumulate on an offscreen canvas (cheap), redrawn
    from the graph only when topology changes (a death). Tips, node
    shimmer, and pulses draw per-frame with additive blending.
@@ -196,6 +200,7 @@ const P = {
   tipsMin: 9,
   tipsMax: 18,
   deathEverySec: 30,
+  bondRadius: 24,      // px — nearby nodes fuse automatically (anastomosis)
 };
 
 // ── state ─────────────────────────────────────────────────────────
@@ -206,7 +211,7 @@ let tips = [];      // {x,y,dir,origin,pts,dist}
 let pulses = [];    // {path:[nodeIdx..],seg,t,speed}
 let gateway = 0;
 let mouse = { x: -1e4, y: -1e4 };
-let lastDeath = 0, lastPulse = 0, dirty = false;
+let lastDeath = 0, lastPulse = 0, lastBond = 0, lastPrune = 0, dirty = false;
 let running = true, staticMode = false;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -296,7 +301,12 @@ function spawnTip(originIdx, dir) {
   tips.push({ x: o.x, y: o.y, dir: dir ?? rand(0, Math.PI * 2), origin: originIdx, pts: [[o.x, o.y]], dist: 0 });
 }
 function stepTips(dt) {
-  if (nodes.filter(n => n.alive).length >= P.nodeCap) { tips.length = Math.min(tips.length, 2); }
+  if (nodes.filter(n => n.alive).length >= P.nodeCap && tips.length > 2) {
+    // at capacity: reforging tips finish their job; idle wanderers cull
+    const keep = tips.filter(t => t.target != null);
+    for (const t of tips) { if (t.target == null && keep.length < 2) keep.push(t); }
+    tips = keep;
+  }
   // keep a working population: regrow from random ALIVE nodes (a tip
   // seeded on a dead node draws strands from nowhere)
   if (tips.length < P.tipsMin && nodes.length < P.nodeCap) {
@@ -308,15 +318,27 @@ function stepTips(dt) {
   const step = P.tipSpeed * dt;
   for (let t = tips.length - 1; t >= 0; t--) {
     const tip = tips[t];
-    // wobble + gentle nutrient pull toward the cursor
-    tip.dir += rand(-P.turnNoise, P.turnNoise) * dt * 6;
-    const dm2 = dist2(tip.x, tip.y, mouse.x, mouse.y);
-    if (dm2 < 250 * 250) {
-      const want = Math.atan2(mouse.y - tip.y, mouse.x - tip.x);
+    if (tip.target != null && !nodes[tip.target].alive) tip.target = null;
+    if (tip.target != null) {
+      // reforging a severed chain: head straight for the chosen node
+      const tgt = nodes[tip.target];
+      tip.dir += rand(-P.turnNoise, P.turnNoise) * dt * 1.5;
+      const want = Math.atan2(tgt.y - tip.y, tgt.x - tip.x);
       let d = want - tip.dir;
       while (d > Math.PI) d -= 2 * Math.PI;
       while (d < -Math.PI) d += 2 * Math.PI;
-      tip.dir += d * P.cursorPull * dt * 2.2;
+      tip.dir += d * Math.min(1, dt * 10);
+    } else {
+      // wobble + gentle nutrient pull toward the cursor
+      tip.dir += rand(-P.turnNoise, P.turnNoise) * dt * 6;
+      const dm2 = dist2(tip.x, tip.y, mouse.x, mouse.y);
+      if (dm2 < 250 * 250) {
+        const want = Math.atan2(mouse.y - tip.y, mouse.x - tip.x);
+        let d = want - tip.dir;
+        while (d > Math.PI) d -= 2 * Math.PI;
+        while (d < -Math.PI) d += 2 * Math.PI;
+        tip.dir += d * P.cursorPull * dt * 2.2;
+      }
     }
     tip.x += Math.cos(tip.dir) * step;
     tip.y += Math.sin(tip.dir) * step;
@@ -329,7 +351,7 @@ function stepTips(dt) {
     }
     // fuse with a nearby node (anastomosis — what makes it a MESH)
     const hit = nearNode(tip.x, tip.y, P.mergeRadius, tip.origin);
-    if (hit >= 0 && tip.dist > P.nodeSpacing * 0.5) { finishTip(t, hit); continue; }
+    if (hit >= 0 && (tip.dist > P.nodeSpacing * 0.5 || hit === tip.target)) { finishTip(t, hit); continue; }
     // drop a waypoint node; maybe branch
     if (tip.dist >= P.nodeSpacing * rand(0.8, 1.25)) {
       const n = addNode(tip.x, tip.y);
@@ -337,12 +359,15 @@ function stepTips(dt) {
       tip.origin = n; tip.pts = [[tip.x, tip.y]]; tip.dist = 0;
       if (Math.random() * 100 < P.branchPct && tips.length < P.tipsMax)
         spawnTip(n, tip.dir + rand(0.5, 1.2) * (Math.random() < 0.5 ? -1 : 1));
-      if (Math.random() < 0.06) { tips.splice(t, 1); } // natural tip death
+      if (tip.target == null && Math.random() < 0.06) { tips.splice(t, 1); } // natural tip death
     }
   }
 }
 function finishTip(tIdx, nodeIdx) {
-  const tip = tips[tIdx];
+  const tip = tips[tIdx], n = nodes[nodeIdx];
+  // the strand must land ON the node it fuses with — without this,
+  // merge-radius fusions left lines stopping up to 11px short
+  if (tip.x !== n.x || tip.y !== n.y) tip.pts.push([n.x, n.y]);
   if (tip.pts.length > 1) addEdge(tip.origin, nodeIdx, tip.pts);
   tips.splice(tIdx, 1);
 }
@@ -396,31 +421,114 @@ function pulseXY(p) {
 }
 
 // ── events: a node dies, the mesh routes around it ────────────────
+function connectedToGateway() {
+  const seen = new Array(nodes.length).fill(false);
+  const q = [gateway]; seen[gateway] = true;
+  for (let qi = 0; qi < q.length; qi++) {
+    const n = q[qi];
+    for (const ei of nodes[n].edges) {
+      const e = edges[ei];
+      if (!e.alive) continue;
+      const m = e.a === n ? e.b : e.a;
+      if (nodes[m].alive && !seen[m]) { seen[m] = true; q.push(m); }
+    }
+  }
+  return seen;
+}
+// After a break, an orphaned section doesn't flail in random
+// directions — it reforges: from the node in its chain nearest the
+// connected network, one tip grows straight at the nearest connected
+// node and fuses. Deliberate repair, not noise.
+function reforgeOrphans() {
+  const conn = connectedToGateway();
+  const claimed = new Array(nodes.length).fill(false);
+  let comps = 0;
+  for (let i = 0; i < nodes.length && comps < 3; i++) {
+    if (!nodes[i].alive || conn[i] || claimed[i]) continue;
+    const comp = [i]; claimed[i] = true;
+    for (let qi = 0; qi < comp.length; qi++) {
+      const n = comp[qi];
+      for (const ei of nodes[n].edges) {
+        const e = edges[ei];
+        if (!e.alive) continue;
+        const m = e.a === n ? e.b : e.a;
+        if (nodes[m].alive && !claimed[m] && !conn[m]) { claimed[m] = true; comp.push(m); }
+      }
+    }
+    let bi = -1, bj = -1, bd = Infinity;
+    for (const n of comp) for (let j = 0; j < nodes.length; j++) {
+      if (!conn[j] || !nodes[j].alive) continue;
+      const d = dist2(nodes[n].x, nodes[n].y, nodes[j].x, nodes[j].y);
+      if (d < bd) { bd = d; bi = n; bj = j; }
+    }
+    if (bi >= 0) {
+      spawnTip(bi, Math.atan2(nodes[bj].y - nodes[bi].y, nodes[bj].x - nodes[bi].x));
+      tips[tips.length - 1].target = bj;
+      comps++;
+    }
+  }
+}
 function killNode(i) {
   nodes[i].alive = false;
   nodes[i].diedAt = performance.now();
-  const survivors = new Set();
-  for (const ei of nodes[i].edges) {
-    const e = edges[ei];
-    e.alive = false;
-    const other = e.a === i ? e.b : e.a;
-    if (nodes[other].alive) survivors.add(other);
-  }
-  // A tip anchored to the dead node would keep drawing strands out of
-  // a corpse — unattached-looking traces. Retire those tips; their
-  // un-deposited partial path simply never existed.
-  for (let t = tips.length - 1; t >= 0; t--)
+  for (const ei of nodes[i].edges) edges[ei].alive = false;
+  // tips anchored on the corpse retire; tips merely heading here wander on
+  for (let t = tips.length - 1; t >= 0; t--) {
     if (tips[t].origin === i) tips.splice(t, 1);
-  // Healing: the wound regrows. Spawn fresh tips from the severed
-  // neighbors so cut-off sections visibly knit back into the mesh —
-  // death triggers growth, which is the most mycelial thing about it.
-  let spawned = 0;
-  for (const nIdx of survivors) {
-    if (spawned >= 2 || tips.length >= P.tipsMax) break;
-    spawnTip(nIdx);
-    spawned++;
+    else if (tips[t].target === i) tips[t].target = null;
   }
+  reforgeOrphans();
   dirty = true; // static layer must forget the dead strands
+}
+// Anastomosis: nodes that end up near each other fuse a bond even
+// across branches — that's what makes it a mesh, not a tree.
+function bondPass() {
+  const r2 = P.bondRadius * P.bondRadius;
+  let made = 0;
+  for (let i = 0; i < nodes.length && made < 2; i++) {
+    if (!nodes[i].alive) continue;
+    for (let j = i + 1; j < nodes.length && made < 2; j++) {
+      if (!nodes[j].alive || dist2(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y) > r2) continue;
+      let linked = false;
+      for (const ei of nodes[i].edges) {
+        const e = edges[ei];
+        if (e.alive && (e.a === j || e.b === j)) { linked = true; break; }
+      }
+      if (linked) continue;
+      const mx = (nodes[i].x + nodes[j].x) / 2 + rand(-3, 3);
+      const my = (nodes[i].y + nodes[j].y) / 2 + rand(-3, 3);
+      addEdge(i, j, [[nodes[i].x, nodes[i].y], [mx, my], [nodes[j].x, nodes[j].y]]);
+      nodes[i].lit = Math.max(nodes[i].lit, 0.5);
+      nodes[j].lit = Math.max(nodes[j].lit, 0.5);
+      made++;
+    }
+  }
+}
+// Efficiency: a lateral link that wanders far while gaining nothing
+// on the route to the gateway retracts (longest first, one per pass).
+// Only same-hop-distance edges qualify — removing one can never
+// orphan a node — so the mesh keeps its few best paths plus the
+// short anastomosis shortcuts, and sheds the scenic routes.
+function prunePass(now) {
+  const dist = new Array(nodes.length).fill(-1);
+  const q = [gateway]; dist[gateway] = 0;
+  for (let qi = 0; qi < q.length; qi++) {
+    const n = q[qi];
+    for (const ei of nodes[n].edges) {
+      const e = edges[ei];
+      if (!e.alive) continue;
+      const m = e.a === n ? e.b : e.a;
+      if (nodes[m].alive && dist[m] === -1) { dist[m] = dist[n] + 1; q.push(m); }
+    }
+  }
+  let worst = -1, worstLen = 0;
+  for (let i = 0; i < edges.length; i++) {
+    const e = edges[i];
+    if (!e.alive || !nodes[e.a].alive || !nodes[e.b].alive) continue;
+    if (dist[e.a] === -1 || dist[e.a] !== dist[e.b]) continue;
+    if (e.len > P.nodeSpacing * 1.35 && e.len > worstLen) { worst = i; worstLen = e.len; }
+  }
+  if (worst >= 0) { edges[worst].alive = false; edges[worst].prunedAt = now; dirty = true; }
 }
 function killRandomNode() {
   const candidates = [];
@@ -452,6 +560,19 @@ function render(now) {
   ctx.clearRect(0, 0, W, H);
   ctx.drawImage(off, 0, 0, W, H);
   ctx.globalCompositeOperation = "lighter";
+
+  // pruned strands retract: a brief amber fade, then gone
+  for (const e of edges) {
+    if (!e.prunedAt) continue;
+    const f = 1 - (now - e.prunedAt) / 1600;
+    if (f <= 0) { e.prunedAt = 0; continue; }
+    ctx.strokeStyle = `rgba(216,178,74,${0.35 * f})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(e.pts[0][0], e.pts[0][1]);
+    for (let k = 1; k < e.pts.length; k++) ctx.lineTo(e.pts[k][0], e.pts[k][1]);
+    ctx.stroke();
+  }
 
   // nodes: faint breathing shimmer; bright when relaying
   for (let i = 0; i < nodes.length; i++) {
@@ -496,6 +617,8 @@ function frame(now) {
   if (now - lastPulse > 60000 / Math.max(P.pulsesPerMin * 6, 1)) { spawnPulse(); lastPulse = now; }
   stepPulses(dt);
   if (now - lastDeath > P.deathEverySec * 1000) { killRandomNode(); lastDeath = now; }
+  if (now - lastBond > 800) { bondPass(); lastBond = now; }
+  if (now - lastPrune > 4000) { prunePass(now); lastPrune = now; }
   if (dirty) redrawStatic();
   render(now);
 
@@ -522,7 +645,10 @@ function growStatic() {
   document.getElementById("rmNote").hidden = false;
   seed();
   const saveCap = P.nodeCap;
-  for (let i = 0; i < 4000 && nodes.length < saveCap; i++) stepTips(1 / 30);
+  for (let i = 0; i < 4000 && nodes.length < saveCap; i++) {
+    stepTips(1 / 30);
+    if (i % 150 === 0) bondPass();
+  }
   redrawStatic();
   ctx.clearRect(0, 0, W, H);
   ctx.drawImage(off, 0, 0, W, H);
