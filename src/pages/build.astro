@@ -1,0 +1,154 @@
+---
+import Base from "../layouts/Base.astro";
+import SiteNav from "../components/SiteNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+/* /build (B2). The on-ramp, three tiers, from the locked copy-build.md.
+   Voice: a friend handing you a soldering iron, not a product configurator.
+   Photo slots = C4 (shot list shown). Costs from bom.md (C2 will render
+   the receipt). Repo deep links = A7 placeholder. */
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const repo = "#";          // A7
+const bom = "#";           // bom.md deep link
+const guide = "#";         // bench-build deep link
+const arch = "#";          // hardware-architecture deep link
+const issues = "#";        // repo issues
+const tiers = [
+  {
+    n: "Tier 1", title: "The bench leaf", cost: "~$176 · one afternoon",
+    photo: "the bench leaf — project box, antenna bulkhead, Mayfly, Grove sensor",
+    body: "The smallest build that exercises the entire real pipeline: a $7 thermometer feeds a Mayfly logger, your Pi seals each reading with AES-256-GCM, the LoRa radio carries it to your gateway, and it lands in your Google Sheet — with a status LED blinking through it all. USB wall power, no solar, no enclosure, no soldering.",
+    aside: "This is the build that teaches you the system. Pinch the thermistor between two fingers and watch your spreadsheet notice.",
+    rows: [
+      ["Parts", "~$176, full list", bom],
+      ["Guide", "step-by-step bring-up", guide],
+      ["You'll need", "a laptop, a micro-SD reader, an afternoon", null],
+    ],
+    rule: "One rule before you start: never power the radio without its antenna attached. (The guide repeats this. It means it.)",
+  },
+  {
+    n: "Tier 2", title: "The node pair", cost: "add a gateway · ~$80 more",
+    photo: "the deployed pair — two boxes talking across the room",
+    body: "A leaf alone is a sensor; a pair is a network. The second box is a gateway — another Pi and radio (~$80 in parts) that listens for sealed readings over LoRa and forwards them to their destination over WiFi. This is the exact architecture of a real deployment, running on your bench: kill the gateway's power mid-batch and watch the leaf buffer, retry, and deliver everything when it returns.",
+    aside: "The failure drills in the repo script that sabotage for you.",
+    rows: [
+      ["Parts", "the Tier 1 leaf + a gateway", bom],
+      ["Guide", "gateway setup + pairing", repo],
+      ["You'll have", "sense → mesh → deliver, in two boxes", null],
+    ],
+    rule: null,
+  },
+  {
+    n: "Tier 3", title: "The field node", cost: "not yet documented — on purpose",
+    photo: null,
+    body: "The solar-powered, weatherproof version: LiFePO4 battery, MPPT charging, IP65 enclosure, pole mount, a real SDI-12 sonde. The draft BOM lands around $262–307 in parts plus mounting hardware — but we haven't yet proven it through a real season of weather, and we don't publish build guides for things we haven't built and broken first.",
+    aside: "The design work is public in the repo today if you want to scout ahead or help test. This section becomes a real guide when the field trial completes — the roadmap tracks it.",
+    rows: [
+      ["Design", "hardware architecture (draft)", arch],
+      ["Status", "field trial pending — roadmap", repo],
+    ],
+    rule: null,
+  },
+];
+---
+<Base title="Build a Mycelium node" description="Build a Mycelium sensor node from off-the-shelf parts. Three tiers, from a ~$176 bench leaf you can build in an afternoon outward. No account, no subscription.">
+  <SiteNav current="build" />
+
+  <header class="page-head" id="main">
+    <div class="wrap narrow">
+      <h1>Build one.</h1>
+      <p class="lede">Everything on this page is something you can actually do —
+      no kit to order from us, no account to create. You buy off-the-shelf
+      parts, follow the guide, and end up with a sensor node that delivers
+      encrypted readings to a spreadsheet you own. Start at the bench and work
+      outward.</p>
+      <p class="beta mono">⚠ Mycelium is in beta. The first two tiers are
+      documented from builds that exist and run today; the field tier is
+      published when our own field hardware survives real weather, not before.</p>
+    </div>
+  </header>
+
+  <section class="tiers">
+    <div class="wrap narrow">
+      {tiers.map((t) => (
+        <article class={`tier ${t.photo ? "" : "no-photo"}`}>
+          <div class="tier-head">
+            <span class="tier-n mono">{t.n}</span>
+            <h2>{t.title}</h2>
+            <span class="tier-cost mono">{t.cost}</span>
+          </div>
+          {t.photo
+            ? <div class="photo-slot" aria-hidden="true"><span class="ph-lbl mono">photo</span><span class="ph-desc">{t.photo}</span></div>
+            : <div class="photo-slot empty" aria-hidden="true"><span class="ph-desc">no photo yet — that's the point</span></div>}
+          <div class="tier-body">
+            <p>{t.body}</p>
+            {t.aside && <p class="dim">{t.aside}</p>}
+            <dl class="tier-rows mono">
+              {t.rows.map(([k, v, href]) => (
+                <div class="row">
+                  <dt>{k}</dt>
+                  <dd>{href ? <a href={href}>{v} →</a> : v}</dd>
+                </div>
+              ))}
+            </dl>
+            {t.rule && <p class="tier-rule small">{t.rule}</p>}
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="after" data-theme="paper">
+    <div class="wrap narrow">
+      <h2>After the build</h2>
+      <p>Your node's readings are yours; so is the network you're growing. Found
+      a rough edge in a guide? That's a bug — <a href={repo}>file it like one</a>.
+      Built something we should know about? Same place. There is no support tier
+      because there is no product — there's a repo, and you're in it now.</p>
+      <div class="ctas">
+        <a class="btn-primary" href={repo}>Read the code</a>
+        <a class="btn-ghost" href={`${base}/why`}>Why we're building this →</a>
+      </div>
+    </div>
+  </section>
+
+  <SiteFooter />
+</Base>
+
+<style>
+  .page-head { padding: var(--s-9) 8vw var(--s-6); }
+  .page-head h1 { margin-bottom: var(--s-4); }
+  .lede { font-size: clamp(1.05rem, 1.5vw, 1.25rem); color: var(--dim); max-width: 56ch; }
+  .beta { margin-top: var(--s-5); padding: var(--s-3) var(--s-4); font-size: var(--t-small);
+    color: var(--amber); border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+    border-radius: var(--r-md); background: color-mix(in srgb, var(--amber) 7%, transparent); max-width: 64ch; }
+
+  .tiers { padding-top: var(--s-6); }
+  .tier { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg-raise);
+    padding: var(--s-6); margin-bottom: var(--s-5); display: grid; gap: var(--s-5);
+    grid-template-columns: 1fr 1.1fr; align-items: start; }
+  .tier.no-photo { grid-template-columns: 1fr; }
+  .tier-head { grid-column: 1 / -1; display: flex; align-items: baseline; gap: var(--s-4); flex-wrap: wrap; }
+  .tier-n { color: var(--accent); font-size: var(--t-small); letter-spacing: 0.08em; }
+  .tier-head h2 { margin: 0; font-size: clamp(1.5rem, 2.4vw, 2rem); }
+  .tier-cost { color: var(--dim); font-size: var(--t-small); margin-left: auto; }
+  .photo-slot { aspect-ratio: 16 / 10; border: 1px dashed color-mix(in srgb, var(--accent) 28%, transparent);
+    border-radius: var(--r-sm); display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: var(--s-2); text-align: center; padding: var(--s-4);
+    background: color-mix(in srgb, var(--accent) 3%, transparent); }
+  .photo-slot.empty { border-style: solid; border-color: var(--line); }
+  .ph-lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  .ph-desc { font-size: var(--t-small); color: var(--dim); max-width: 30ch; }
+  .tier-body p { max-width: none; }
+  .tier-rows { margin: var(--s-4) 0 0; border-top: 1px solid var(--line); }
+  .tier-rows .row { display: grid; grid-template-columns: 9rem 1fr; gap: var(--s-3);
+    padding: var(--s-3) 0; border-bottom: 1px solid var(--line); font-size: var(--t-small); }
+  .tier-rows dt { color: var(--dim); margin: 0; }
+  .tier-rows dd { margin: 0; color: var(--ink); }
+  .tier-rows a { color: var(--accent); }
+  .tier-rule { margin-top: var(--s-4); color: var(--amber); }
+
+  .after .ctas { margin-top: var(--s-5); align-items: center; }
+  .after .btn-ghost { color: var(--accent-deep); }
+
+  @media (max-width: 720px) { .tier { grid-template-columns: 1fr; } }
+</style>

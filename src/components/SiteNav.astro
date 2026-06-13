@@ -1,0 +1,33 @@
+---
+/* Shared top nav. Pass `current` ("build"|"why"|"lab") to mark the active page. */
+const { current = "" } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const repo = "#"; // A7
+---
+<header class="nav">
+  <a class="brand" href={`${base}/`}>LBM&nbsp;Labs</a>
+  <nav>
+    <a href={`${base}/build`} aria-current={current === "build" ? "page" : undefined}>Build</a>
+    <a href={`${base}/why`} aria-current={current === "why" ? "page" : undefined}>Why</a>
+    <a href={`${base}/lab`} aria-current={current === "lab" ? "page" : undefined}>Lab</a>
+    <a href={repo}>GitHub&nbsp;↗</a>
+  </nav>
+</header>
+
+<style>
+  .nav {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--s-3) 8vw;
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--t-small);
+  }
+  .nav .brand { font-weight: 600; color: var(--ink); }
+  .nav nav { display: flex; gap: var(--s-5); }
+  .nav nav a { color: var(--dim); }
+  .nav nav a:hover { color: var(--accent); text-decoration: none; }
+  .nav nav a[aria-current="page"] { color: var(--accent); }
+  @media (max-width: 720px) { .nav nav { gap: var(--s-4); } }
+</style>

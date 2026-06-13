@@ -1,0 +1,24 @@
+---
+/* Shared footer. */
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const repo = "#"; // A7
+---
+<footer class="foot">
+  <div class="wrap narrow">
+    <nav class="foot-links">
+      <a href={`${base}/build`}>Build</a> · <a href={`${base}/why`}>Why</a> ·
+      <a href={`${base}/lab`}>Lab</a> · <a href={repo}>GitHub&nbsp;↗</a> ·
+      <a href="mailto:hello@lbmlabs.org">Email</a>
+    </nav>
+    <p class="brandline">LBM Labs builds open, public-good infrastructure for understanding the natural world.</p>
+    <p class="dim small mono">Apache-2.0 · CC BY 4.0 · No analytics on this site — we don't watch you read about watching creeks.</p>
+  </div>
+</footer>
+
+<style>
+  .foot { background: var(--bg); border-top: 1px solid var(--line); padding: var(--s-7) 8vw; }
+  .foot-links { color: var(--dim); margin-bottom: var(--s-4); }
+  .foot-links a { color: var(--dim); }
+  .foot-links a:hover { color: var(--accent); }
+  .brandline { color: var(--ink); max-width: 60ch; margin-bottom: var(--s-3); }
+</style>
