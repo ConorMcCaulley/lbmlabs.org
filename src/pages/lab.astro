@@ -17,16 +17,18 @@ const repo = "#"; // A7
       <h1>LBM&nbsp;Labs</h1>
       <p class="statement">LBM Labs builds open, public-good infrastructure for
       understanding the natural world — and gives the designs away. There's no
-      markup and no subscription: the design is free, and any hardware we offer
+      markup and no subscription: the design is free, and any hardware it offers
       is sold at cost, because tools for protecting the commons should belong to
-      it. Everything we produce is published complete: hardware designs,
+      it. Everything the lab produces is published complete: hardware designs,
       firmware, software, documentation, and the roadmap, under licenses that let
       you use it, change it, and build on it (Apache-2.0 for code, CC BY 4.0 for
-      docs and hardware). Our flagship project is <strong>Mycelium</strong>, a
+      docs and hardware). The flagship project is <strong>Mycelium</strong>, a
       free, open, encrypted environmental telemetry mesh — the best way to
-      understand the lab is to <a href={`${base}/why`}>read why we built it</a>
+      understand the lab is to <a href={`${base}/why`}>read why I built it</a>
       or just <a href={`${base}/build`}>build a node</a>. More projects will
       appear here as they earn the space.</p>
+
+      <p class="solo dim">LBM Labs is one person right now — plus whoever shows up in the issues.</p>
 
       <h2>How to follow or help</h2>
       <ul class="contact">
@@ -47,6 +49,7 @@ const repo = "#"; // A7
   .statement { font-size: clamp(1.1rem, 1.7vw, 1.35rem); line-height: 1.7; max-width: 60ch; color: var(--ink); }
   .statement strong { color: var(--accent); }
   .statement a { color: var(--accent); }
+  .solo { margin-top: var(--s-4); font-size: var(--t-small); max-width: 56ch; }
   .lab h2 { margin-top: var(--s-7); font-size: var(--t-h3); }
   .contact { list-style: none; padding: 0; margin: var(--s-4) 0; display: grid; gap: var(--s-3); }
   .contact li { color: var(--dim); }
