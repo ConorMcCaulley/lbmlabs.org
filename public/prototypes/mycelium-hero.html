@@ -7,15 +7,23 @@
   ("The mycelial animation").
 
   What it performs (the architecture, as motion):
-    - hyphae GROW generatively across the dark field
-    - junctions become NODES; every node visibly RELAYS — light pulses
-      hop node-to-node toward the gateway
-    - every ~30s a node DIES and traffic visibly re-routes around it
+    - hyphae GROW generatively, sprinkling NODES across the dark field
+    - GATEWAYS appear over time (≈1 / 3s up to a density cap) and
+      are drawn as bright haloed hubs, clearly distinct from nodes
+    - the drawn traces are the PRIMARY RADIO LINKS only: each node homes
+      to the in-range neighbour that gives it the fewest hops to a
+      gateway, exactly the link Reticulum would keep live. Routing is
+      re-evaluated continuously, so when a nearer gateway appears a
+      whole region visibly re-parents (links flip)
+    - light pulses RELAY up those primary links to a gateway: every
+      node is a relay
+    - a node DIES (periodically, or on click) and its children re-home
+      to other in-range neighbours — the mesh heals by re-routing
     - the cursor is a NUTRIENT source: nearby growth leans toward it
-    - prefers-reduced-motion → a static, fully-grown still (no pulses)
+    - prefers-reduced-motion → a static, fully-grown still (no motion)
 
-  Review controls: top-right panel (tune speeds, density, pulse rate;
-  kill a node on demand; preview reduced-motion; FPS meter).
+  Review controls: top-right panel (tune growth, density, radio range,
+  pulse rate; kill a node; preview reduced-motion; FPS + gateway count).
   Everything in the overlay marked SAMPLE is placeholder hero copy so
   the composition can be judged — final copy comes from Phase B.
 -->
@@ -77,7 +85,7 @@
 
   /* ── review panel ───────────────────────────────────────────── */
   .panel {
-    position: fixed; right: 12px; top: 12px; width: 250px; z-index: 10;
+    position: fixed; right: 12px; top: 12px; width: 256px; z-index: 10;
     background: rgba(10, 18, 14, 0.92); border: 1px solid #1e2f26;
     border-radius: 8px; color: var(--ink); padding: 10px 12px;
     font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
@@ -92,6 +100,7 @@
   }
   .panel button:hover { border-color: var(--accent); }
   .panel .fps { color: var(--accent); }
+  .panel .gw { color: var(--accent); }
   .panel .val { color: var(--accent); min-width: 3ch; text-align: right; margin-left: auto; }
   .reduced-note {
     position: fixed; right: 12px; bottom: 12px; color: var(--dim);
@@ -131,10 +140,11 @@
   <span class="ok">0 readings lost since deploy</span> · (SAMPLE)</div>
 
 <details class="panel" open>
-  <summary>tune the organism · <span class="fps" id="fps">– fps</span></summary>
+  <summary>tune the organism · <span class="fps" id="fps">– fps</span> · <span class="gw" id="gwc">1 gw</span></summary>
   <label>growth speed <span class="val" id="vSpeed"></span><input type="range" id="pSpeed" min="6" max="60" value="36"></label>
   <label>branchiness <span class="val" id="vBranch"></span><input type="range" id="pBranch" min="5" max="70" value="34"></label>
   <label>density cap <span class="val" id="vCap"></span><input type="range" id="pCap" min="120" max="900" value="374"></label>
+  <label>radio range <span class="val" id="vRange"></span><input type="range" id="pRange" min="70" max="220" value="118"></label>
   <label>pulse rate <span class="val" id="vPulse"></span><input type="range" id="pPulse" min="2" max="30" value="10"></label>
   <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="21"></label>
   <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="15"></label>
@@ -148,7 +158,7 @@
   </div>
 </details>
 
-<div class="reduced-note" id="hint">click any node to break the network — watch it heal</div>
+<div class="reduced-note" id="hint">click any node to break the network — watch it re-route</div>
 <div class="reduced-note" id="rmNote" hidden>
   reduced-motion mode: fully-grown still, no animation —
   this is what <code>prefers-reduced-motion</code> visitors see.
@@ -157,31 +167,36 @@
 <script>
 "use strict";
 /* ════════════════════════════════════════════════════════════════
-   The organism. Three cooperating systems:
-     1. GROWTH  — hyphal tips random-walk, branch, and fuse, leaving
-                  a graph of nodes (junctions/waypoints) and edges
-                  (the polylines walked between them).
-     2. TRAFFIC — pulses spawn at outlying nodes and hop the graph
-                  toward the gateway (BFS shortest path), brightening
-                  every node they pass: every node IS a relay.
-    3. EVENTS  — periodic node death; live pulses re-route. A severed
-                 section REFORGES: a tip grows straight from its chain
-                 to the nearest connected node (not random regrowth).
-                 Close nodes auto-fuse (anastomosis); long lateral
-                 strands that gain nothing on the gateway route are
-                 PRUNED with an amber retraction.
-   Rendering: edges accumulate on an offscreen canvas (cheap), redrawn
-   from the graph only when topology changes (a death). Tips, node
-   shimmer, and pulses draw per-frame with additive blending.
+   The organism, as a Reticulum-style network. Layers:
+
+     1. GROWTH   — hyphal tips random-walk and sprinkle NODES across
+                   the field (organic placement; the cursor is a
+                   nutrient that growth leans toward).
+     2. GATEWAYS — appear over time (≈1 / 3s up to a density cap),
+                   drawn as bright haloed hubs distinct from nodes.
+     3. ROUTING  — the only lines DRAWN are primary radio links. Over
+                   the unit-disk graph (nodes within `range` hear each
+                   other), a multi-source BFS from every gateway gives
+                   each node a hop count; each node's primary link is
+                   to the closest in-range neighbour with one fewer
+                   hop. Re-evaluated continuously, so a new gateway
+                   makes a region re-parent (links flip) live.
+     4. TRAFFIC  — pulses relay up the primary links to a gateway.
+     5. EVENTS   — a node dies (periodically / on click); its children
+                   re-home to other in-range neighbours. Healing IS
+                   re-routing — no separate repair system needed.
+
+   Rendering: primary links are straight strokes batched into one path
+   (cheap); nodes, gateways, and pulses draw per-frame with additive
+   blending. Routing recompute is O(n²), run a few times/second.
    ════════════════════════════════════════════════════════════════ */
 
 const canvas = document.getElementById("field");
 const ctx = canvas.getContext("2d");
-const off = document.createElement("canvas");
-const offCtx = off.getContext("2d");
 
 const ACCENT = { r: 159, g: 245, b: 201 };   // --accent
-const DPR_CAP = 1.5;                          // CPU budget: cap pixel density
+const HOT = { r: 224, g: 255, b: 238 };      // gateway core (hot white-green)
+const DPR_CAP = 1.5;                         // CPU budget: cap pixel density
 
 // ── tunables (bound to the review panel) ──────────────────────────
 // Defaults = Conor's tuning session (June 2026): faster, sparser,
@@ -190,409 +205,294 @@ const DPR_CAP = 1.5;                          // CPU budget: cap pixel density
 const P = {
   tipSpeed: 36,        // px/sec a growing tip advances
   branchPct: 34,       // % chance to branch at each new node
-  nodeCap: 374,        // stop growing past this many nodes
+  nodeCap: 374,        // stop growing past this many (non-gateway) nodes
+  range: 118,          // px radio range — who can hear whom
   pulsesPerMin: 10,    // traffic intensity
   cursorPull: 0.21,    // 0..1 nutrient attraction strength
-  glow: 0.15,          // edge brightness
+  glow: 0.15,          // link brightness
   nodeSpacing: 72,     // px walked between node drops
-  mergeRadius: 11,     // px to fuse into an existing node
+  mergeRadius: 13,     // px: a tip this close to a node ends (no stacking)
   turnNoise: 0.55,     // radians/step wobble
   tipsMin: 9,
   tipsMax: 18,
   deathEverySec: 30,
-  bondRadius: 24,      // px — nearby nodes fuse automatically (anastomosis)
+  gatewayEverySec: 3,  // cadence of new gateway births
+  maxGateways: 6,      // hard ceiling
+  nodesPerGateway: 90, // density target: ~1 gateway per this many nodes
+  routeMs: 600,        // how often routing is re-evaluated
 };
 
 // ── state ─────────────────────────────────────────────────────────
 let W = 0, H = 0, DPR = 1;
-let nodes = [];     // {x,y,alive,edges:[],phase,lit:0,bornAt}
-let edges = [];     // {a,b,pts:[[x,y]..],len,cum:[],alive}
-let tips = [];      // {x,y,dir,origin,pts,dist}
+let nodes = [];     // {x,y,alive,isGateway,hops,parent,lit,phase,bornAt,diedAt}
+let tips = [];      // {x,y,dir,dist}
 let pulses = [];    // {path:[nodeIdx..],seg,t,speed}
-let gateway = 0;
 let mouse = { x: -1e4, y: -1e4 };
-let lastDeath = 0, lastPulse = 0, lastBond = 0, lastPrune = 0, dirty = false;
-let running = true, staticMode = false;
+let lastDeath = 0, lastPulse = 0, lastGateway = 0, lastRoute = 0;
+let routeDirty = true, running = true, staticMode = false;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const dist2 = (ax, ay, bx, by) => { const dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; };
+function aliveCount(gw) { let c = 0; for (const n of nodes) if (n.alive && !!n.isGateway === gw) c++; return c; }
+function gatewayCount() { return aliveCount(true); }
 
 function resize() {
   DPR = Math.min(devicePixelRatio || 1, DPR_CAP);
   const oldW = W, oldH = H;
   W = innerWidth; H = innerHeight;
-  for (const c of [canvas, off]) { c.width = W * DPR; c.height = H * DPR; }
+  canvas.width = W * DPR; canvas.height = H * DPR;
   canvas.style.width = W + "px"; canvas.style.height = H + "px";
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  offCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
   // The organism survives resizes by stretching with the viewport —
   // otherwise a rotation/panel-resize strands it off-canvas.
   if (oldW > 0 && oldH > 0 && nodes.length && (W !== oldW || H !== oldH)) {
     const sx = W / oldW, sy = H / oldH;
     for (const n of nodes) { n.x *= sx; n.y *= sy; }
-    for (const t of tips) {
-      t.x *= sx; t.y *= sy;
-      for (const pt of t.pts) { pt[0] *= sx; pt[1] *= sy; }
-    }
-    for (const e of edges) {
-      for (const pt of e.pts) { pt[0] *= sx; pt[1] *= sy; }
-      e.cum = [0];
-      for (let i = 1; i < e.pts.length; i++)
-        e.cum.push(e.cum[i - 1] + Math.hypot(e.pts[i][0] - e.pts[i - 1][0], e.pts[i][1] - e.pts[i - 1][1]));
-      e.len = e.cum[e.cum.length - 1] || 1;
-    }
+    for (const t of tips) { t.x *= sx; t.y *= sy; }
+    routeDirty = true; // range is in px → re-evaluate who can hear whom
   }
-  dirty = true; // re-lay the static layer at the new size
 }
 addEventListener("resize", resize);
 
-// ── graph helpers ─────────────────────────────────────────────────
-function addNode(x, y) {
-  nodes.push({ x, y, alive: true, edges: [], phase: rand(0, Math.PI * 2), lit: 0, bornAt: performance.now() });
+// ── graph ─────────────────────────────────────────────────────────
+function addNode(x, y, isGateway) {
+  nodes.push({ x, y, alive: true, isGateway: !!isGateway, hops: Infinity, parent: -1,
+               lit: 0, phase: rand(0, Math.PI * 2), bornAt: performance.now(), diedAt: 0 });
+  routeDirty = true;
   return nodes.length - 1;
 }
-function addEdge(a, b, pts) {
-  // cumulative arclength so pulses can move at constant px/sec
-  const cum = [0];
-  for (let i = 1; i < pts.length; i++)
-    cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-  const e = { a, b, pts, len: cum[cum.length - 1] || 1, cum, alive: true };
-  edges.push(e);
-  const idx = edges.length - 1;
-  nodes[a].edges.push(idx); nodes[b].edges.push(idx);
-  drawEdge(offCtx, e); // append-only: no full redraw while growing
-  return idx;
-}
-function linkedAlive(a, b) {
-  for (const ei of nodes[a].edges) {
-    const e = edges[ei];
-    if (e.alive && (e.a === b || e.b === b)) return true;
-  }
-  return false;
-}
-function nearNode(x, y, r, exclude) {
-  // O(n) scan is fine at this scale (≤ ~900 nodes, called per node-drop)
+function nearNode(x, y, r) {
   const r2 = r * r;
   for (let i = 0; i < nodes.length; i++) {
-    if (i === exclude || !nodes[i].alive) continue;
+    if (!nodes[i].alive) continue;
     if (dist2(x, y, nodes[i].x, nodes[i].y) < r2) return i;
   }
   return -1;
 }
-function bfsPath(from, to) {
-  if (from === to) return null;
-  const prev = new Array(nodes.length).fill(-1);
-  const prevEdge = new Array(nodes.length).fill(-1);
-  const q = [from]; prev[from] = from;
-  while (q.length) {
-    const n = q.shift();
-    if (n === to) break;
-    for (const ei of nodes[n].edges) {
-      const e = edges[ei];
-      if (!e.alive) continue;
-      const m = e.a === n ? e.b : e.a;
-      if (!nodes[m].alive || prev[m] !== -1) continue;
-      prev[m] = n; prevEdge[m] = ei; q.push(m);
+
+// Continuous routing: every node homes to the in-range neighbour that
+// gives it the fewest hops to a gateway — the primary link Reticulum
+// keeps live. Multi-source BFS from all gateways assigns hop counts;
+// a second pass picks each node's closest valid parent.
+function recomputeRouting() {
+  const N = nodes.length, R2 = P.range * P.range;
+  for (let i = 0; i < N; i++) { nodes[i].hops = Infinity; nodes[i].parent = -1; }
+  const q = [];
+  for (let i = 0; i < N; i++) {
+    const n = nodes[i];
+    if (n.alive && n.isGateway) { n.hops = 0; q.push(i); }
+  }
+  for (let qi = 0; qi < q.length; qi++) {
+    const ni = q[qi], n = nodes[ni], nh = n.hops + 1;
+    for (let m = 0; m < N; m++) {
+      const mm = nodes[m];
+      if (m === ni || !mm.alive || mm.hops <= nh) continue;
+      if (dist2(n.x, n.y, mm.x, mm.y) > R2) continue;
+      mm.hops = nh; q.push(m);
     }
   }
-  if (prev[to] === -1) return null;
-  const path = [];
-  for (let n = to; n !== from; n = prev[n]) path.push({ node: n, edge: prevEdge[n] });
-  return path.reverse(); // [{edge to take, node arrived at}, ...]
+  // parent = closest in-range neighbour exactly one hop nearer
+  for (let i = 0; i < N; i++) {
+    const m = nodes[i];
+    if (!m.alive || m.isGateway || !isFinite(m.hops)) continue;
+    let best = -1, bd = Infinity;
+    for (let j = 0; j < N; j++) {
+      const n = nodes[j];
+      if (!n.alive || n.hops !== m.hops - 1) continue;
+      const d = dist2(m.x, m.y, n.x, n.y);
+      if (d <= R2 && d < bd) { bd = d; best = j; }
+    }
+    m.parent = best;
+  }
+  routeDirty = false;
+}
+
+// Follow primary links up to a gateway (null if not currently homed).
+function pathToGateway(start) {
+  const path = [start]; let n = start, guard = 0;
+  while (!nodes[n].isGateway) {
+    const p = nodes[n].parent;
+    if (p === -1 || !nodes[p].alive || ++guard > 400) return null;
+    path.push(p); n = p;
+  }
+  return path.length >= 2 ? path : null;
 }
 
 // ── growth ────────────────────────────────────────────────────────
-function spawnTip(originIdx, dir) {
-  const o = nodes[originIdx];
-  tips.push({ x: o.x, y: o.y, dir: dir ?? rand(0, Math.PI * 2), origin: originIdx, pts: [[o.x, o.y]], dist: 0 });
+function spawnTip(idx, dir) {
+  const o = nodes[idx];
+  tips.push({ x: o.x, y: o.y, dir: dir ?? rand(0, Math.PI * 2), dist: 0 });
+}
+function spawnTipFromRandom() {
+  const alive = [];
+  for (let i = 0; i < nodes.length; i++) if (nodes[i].alive) alive.push(i);
+  if (alive.length) spawnTip(alive[Math.floor(Math.random() * alive.length)]);
 }
 function stepTips(dt) {
-  if (nodes.filter(n => n.alive).length >= P.nodeCap && tips.length > 2) {
-    // at capacity: reforging tips finish their job; idle wanderers cull
-    const keep = tips.filter(t => t.target != null);
-    for (const t of tips) { if (t.target == null && keep.length < 2) keep.push(t); }
-    tips = keep;
-  }
-  // keep a working population: regrow from random ALIVE nodes (a tip
-  // seeded on a dead node draws strands from nowhere)
-  if (tips.length < P.tipsMin && nodes.length < P.nodeCap) {
-    const alive = [];
-    for (let i = 0; i < nodes.length; i++) if (nodes[i].alive) alive.push(i);
-    while (tips.length < P.tipsMin && alive.length)
-      spawnTip(alive[Math.floor(Math.random() * alive.length)]);
-  }
+  const grown = aliveCount(false);
+  if (grown >= P.nodeCap) { if (tips.length > 2) tips.length = 2; }
+  else while (tips.length < P.tipsMin) spawnTipFromRandom();
+
   const step = P.tipSpeed * dt;
   for (let t = tips.length - 1; t >= 0; t--) {
     const tip = tips[t];
-    if (tip.target != null && !nodes[tip.target].alive) tip.target = null;
-    if (tip.target != null) {
-      // reforging a severed chain: head straight for the chosen node
-      const tgt = nodes[tip.target];
-      tip.dir += rand(-P.turnNoise, P.turnNoise) * dt * 1.5;
-      const want = Math.atan2(tgt.y - tip.y, tgt.x - tip.x);
+    // wobble + gentle nutrient pull toward the cursor
+    tip.dir += rand(-P.turnNoise, P.turnNoise) * dt * 6;
+    const dm2 = dist2(tip.x, tip.y, mouse.x, mouse.y);
+    if (dm2 < 250 * 250) {
+      const want = Math.atan2(mouse.y - tip.y, mouse.x - tip.x);
       let d = want - tip.dir;
       while (d > Math.PI) d -= 2 * Math.PI;
       while (d < -Math.PI) d += 2 * Math.PI;
-      tip.dir += d * Math.min(1, dt * 10);
-    } else {
-      // wobble + gentle nutrient pull toward the cursor
-      tip.dir += rand(-P.turnNoise, P.turnNoise) * dt * 6;
-      const dm2 = dist2(tip.x, tip.y, mouse.x, mouse.y);
-      if (dm2 < 250 * 250) {
-        const want = Math.atan2(mouse.y - tip.y, mouse.x - tip.x);
-        let d = want - tip.dir;
-        while (d > Math.PI) d -= 2 * Math.PI;
-        while (d < -Math.PI) d += 2 * Math.PI;
-        tip.dir += d * P.cursorPull * dt * 2.2;
-      }
+      tip.dir += d * P.cursorPull * dt * 2.2;
     }
     tip.x += Math.cos(tip.dir) * step;
     tip.y += Math.sin(tip.dir) * step;
     tip.dist += step;
-    tip.pts.push([tip.x, tip.y]);
 
-    // leave the field → seal the strand at a final node
+    // leave the field → drop a frontier node and retire the tip
     if (tip.x < -20 || tip.x > W + 20 || tip.y < -20 || tip.y > H + 20) {
-      finishTip(t, addNode(tip.x, tip.y)); continue;
+      if (grown < P.nodeCap) addNode(clamp(tip.x, 2, W - 2), clamp(tip.y, 2, H - 2), false);
+      tips.splice(t, 1); continue;
     }
-    // fuse with a nearby node (anastomosis — what makes it a MESH)
-    const hit = nearNode(tip.x, tip.y, P.mergeRadius, tip.origin);
-    if (hit >= 0 && (tip.dist > P.nodeSpacing * 0.5 || hit === tip.target)) { finishTip(t, hit); continue; }
-    // drop a waypoint node; maybe branch
-    if (tip.dist >= P.nodeSpacing * rand(0.8, 1.25)) {
-      const n = addNode(tip.x, tip.y);
-      addEdge(tip.origin, n, tip.pts);
-      tip.origin = n; tip.pts = [[tip.x, tip.y]]; tip.dist = 0;
+    // ran into an existing node → end here (avoid stacking; routing meshes them)
+    if (tip.dist > P.nodeSpacing * 0.5 && nearNode(tip.x, tip.y, P.mergeRadius) >= 0) {
+      tips.splice(t, 1); continue;
+    }
+    // drop a waypoint node; maybe branch; rare natural tip death
+    if (tip.dist >= P.nodeSpacing * rand(0.8, 1.25) && grown < P.nodeCap) {
+      const n = addNode(tip.x, tip.y, false);
+      tip.dist = 0;
       if (Math.random() * 100 < P.branchPct && tips.length < P.tipsMax)
         spawnTip(n, tip.dir + rand(0.5, 1.2) * (Math.random() < 0.5 ? -1 : 1));
-      if (tip.target == null && Math.random() < 0.06) { tips.splice(t, 1); } // natural tip death
+      if (Math.random() < 0.06) tips.splice(t, 1);
     }
   }
 }
-function finishTip(tIdx, nodeIdx) {
-  const tip = tips[tIdx], n = nodes[nodeIdx];
-  // the strand must land ON the node it fuses with — without this,
-  // merge-radius fusions left lines stopping up to 11px short
-  if (tip.x !== n.x || tip.y !== n.y) tip.pts.push([n.x, n.y]);
-  // never lay a second strand between an already-linked pair — the
-  // redundant path evaporates undrawn (it was the source of the
-  // "doubled lines, slightly different paths" artifact)
-  if (tip.pts.length > 1 && tip.origin !== nodeIdx && !linkedAlive(tip.origin, nodeIdx))
-    addEdge(tip.origin, nodeIdx, tip.pts);
-  tips.splice(tIdx, 1);
+
+// ── gateways ──────────────────────────────────────────────────────
+function gatewayTarget() {
+  return clamp(Math.round(aliveCount(false) / P.nodesPerGateway), 1, P.maxGateways);
+}
+function addGateway() {
+  // born near an existing cluster so it immediately re-roots a region
+  const alive = [];
+  for (let i = 0; i < nodes.length; i++) if (nodes[i].alive && !nodes[i].isGateway) alive.push(i);
+  let x = W * rand(0.2, 0.8), y = H * rand(0.2, 0.8);
+  if (alive.length) {
+    const a = nodes[alive[Math.floor(Math.random() * alive.length)]];
+    const ang = rand(0, Math.PI * 2), r = P.range * rand(0.3, 0.75);
+    x = clamp(a.x + Math.cos(ang) * r, 30, W - 30);
+    y = clamp(a.y + Math.sin(ang) * r, 30, H - 30);
+  }
+  addNode(x, y, true);
 }
 
 // ── traffic ───────────────────────────────────────────────────────
 function spawnPulse() {
-  const candidates = [];
-  for (let i = 0; i < nodes.length; i++)
-    if (nodes[i].alive && i !== gateway && nodes[i].edges.length <= 3) candidates.push(i);
-  if (!candidates.length) return;
-  const from = candidates[Math.floor(Math.random() * candidates.length)];
-  const path = bfsPath(from, gateway);
+  // bias toward distant (high-hop) nodes for longer, more visible relays
+  let pick = -1, pickHops = -1;
+  for (let s = 0; s < 6; s++) {
+    const i = Math.floor(Math.random() * nodes.length);
+    const n = nodes[i];
+    if (!n.alive || n.isGateway || !isFinite(n.hops) || n.hops < 1) continue;
+    if (n.hops > pickHops) { pickHops = n.hops; pick = i; }
+  }
+  if (pick < 0) return;
+  const path = pathToGateway(pick);
   if (!path) return;
-  pulses.push({ at: from, path, seg: 0, t: 0, speed: rand(120, 200) });
-  nodes[from].lit = 1;
+  pulses.push({ path, seg: 0, t: 0, speed: rand(120, 200) });
+  nodes[pick].lit = 1;
 }
 function stepPulses(dt) {
   for (let i = pulses.length - 1; i >= 0; i--) {
     const p = pulses[i];
-    const hop = p.path[p.seg];
-    const e = edges[hop.edge];
-    if (!e || !e.alive || !nodes[hop.node].alive) {
-      // route broke mid-flight (a death) → re-plan from current node
-      const re = bfsPath(p.at, gateway);
-      if (!re) { pulses.splice(i, 1); continue; }
-      p.path = re; p.seg = 0; p.t = 0; continue;
+    const a = p.path[p.seg];
+    if (!nodes[a].alive) { pulses.splice(i, 1); continue; }
+    let b = p.path[p.seg + 1];
+    // primary link may have switched (routing update / death) → re-home live
+    if (b == null || !nodes[b].alive || nodes[a].parent !== b) {
+      const np = pathToGateway(a);
+      if (!np) { pulses.splice(i, 1); continue; }
+      p.path = np; p.seg = 0; p.t = 0; b = p.path[1];
     }
+    const A = nodes[a], B = nodes[b];
+    const segLen = Math.hypot(B.x - A.x, B.y - A.y) || 1;
     p.t += p.speed * dt;
-    if (p.t >= e.len) {
-      p.at = hop.node;
-      nodes[p.at].lit = 1; // the relay moment: passing nodes light up
+    if (p.t >= segLen) {
+      nodes[b].lit = 1;              // the relay moment: passing nodes light up
       p.seg++; p.t = 0;
-      if (p.seg >= p.path.length) {        // arrived at the gateway
-        nodes[gateway].lit = 1.6;          // gateway flickers brighter
+      if (nodes[b].isGateway || p.seg >= p.path.length - 1) {
+        nodes[b].lit = 1.8;         // gateway flares on delivery
         pulses.splice(i, 1);
       }
     }
   }
 }
 function pulseXY(p) {
-  const hop = p.path[p.seg], e = edges[hop.edge];
-  const fwd = e.a === p.at || (p.seg > 0 && e.a === p.path[p.seg - 1].node);
-  const d = fwd ? p.t : e.len - p.t;
-  const { pts, cum } = e;
-  let i = 1;
-  while (i < cum.length && cum[i] < d) i++;
-  if (i >= pts.length) return pts[pts.length - 1];
-  const f = (d - cum[i - 1]) / Math.max(cum[i] - cum[i - 1], 1e-6);
-  return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f,
-          pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+  const A = nodes[p.path[p.seg]], B = nodes[p.path[p.seg + 1]];
+  const segLen = Math.hypot(B.x - A.x, B.y - A.y) || 1;
+  const f = clamp(p.t / segLen, 0, 1);
+  return [A.x + (B.x - A.x) * f, A.y + (B.y - A.y) * f];
 }
 
-// ── events: a node dies, the mesh routes around it ────────────────
-function connectedToGateway() {
-  const seen = new Array(nodes.length).fill(false);
-  const q = [gateway]; seen[gateway] = true;
-  for (let qi = 0; qi < q.length; qi++) {
-    const n = q[qi];
-    for (const ei of nodes[n].edges) {
-      const e = edges[ei];
-      if (!e.alive) continue;
-      const m = e.a === n ? e.b : e.a;
-      if (nodes[m].alive && !seen[m]) { seen[m] = true; q.push(m); }
-    }
-  }
-  return seen;
-}
-// After a break, an orphaned section doesn't flail in random
-// directions — it reforges: from the node in its chain nearest the
-// connected network, one tip grows straight at the nearest connected
-// node and fuses. Deliberate repair, not noise.
-function reforgeOrphans() {
-  const conn = connectedToGateway();
-  const claimed = new Array(nodes.length).fill(false);
-  let comps = 0;
-  for (let i = 0; i < nodes.length && comps < 3; i++) {
-    if (!nodes[i].alive || conn[i] || claimed[i]) continue;
-    const comp = [i]; claimed[i] = true;
-    for (let qi = 0; qi < comp.length; qi++) {
-      const n = comp[qi];
-      for (const ei of nodes[n].edges) {
-        const e = edges[ei];
-        if (!e.alive) continue;
-        const m = e.a === n ? e.b : e.a;
-        if (nodes[m].alive && !claimed[m] && !conn[m]) { claimed[m] = true; comp.push(m); }
-      }
-    }
-    let bi = -1, bj = -1, bd = Infinity;
-    for (const n of comp) for (let j = 0; j < nodes.length; j++) {
-      if (!conn[j] || !nodes[j].alive) continue;
-      const d = dist2(nodes[n].x, nodes[n].y, nodes[j].x, nodes[j].y);
-      if (d < bd) { bd = d; bi = n; bj = j; }
-    }
-    if (bi >= 0) {
-      spawnTip(bi, Math.atan2(nodes[bj].y - nodes[bi].y, nodes[bj].x - nodes[bi].x));
-      tips[tips.length - 1].target = bj;
-      comps++;
-    }
-  }
-}
+// ── events: a node dies, children re-home ─────────────────────────
 function killNode(i) {
+  if (nodes[i].isGateway) return;   // gateways are immune (hubs)
   nodes[i].alive = false;
   nodes[i].diedAt = performance.now();
-  for (const ei of nodes[i].edges) edges[ei].alive = false;
-  // tips anchored on the corpse retire; tips merely heading here wander on
-  for (let t = tips.length - 1; t >= 0; t--) {
-    if (tips[t].origin === i) tips.splice(t, 1);
-    else if (tips[t].target === i) tips[t].target = null;
-  }
-  reforgeOrphans();
-  dirty = true; // static layer must forget the dead strands
-}
-// Anastomosis: nodes that end up near each other fuse a bond even
-// across branches — that's what makes it a mesh, not a tree.
-function bondPass() {
-  const r2 = P.bondRadius * P.bondRadius;
-  let made = 0;
-  for (let i = 0; i < nodes.length && made < 2; i++) {
-    if (!nodes[i].alive) continue;
-    for (let j = i + 1; j < nodes.length && made < 2; j++) {
-      if (!nodes[j].alive || dist2(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y) > r2) continue;
-      if (linkedAlive(i, j)) continue;
-      const mx = (nodes[i].x + nodes[j].x) / 2 + rand(-3, 3);
-      const my = (nodes[i].y + nodes[j].y) / 2 + rand(-3, 3);
-      addEdge(i, j, [[nodes[i].x, nodes[i].y], [mx, my], [nodes[j].x, nodes[j].y]]);
-      nodes[i].lit = Math.max(nodes[i].lit, 0.5);
-      nodes[j].lit = Math.max(nodes[j].lit, 0.5);
-      made++;
-    }
-  }
-}
-// Efficiency: a lateral link that wanders far while gaining nothing
-// on the route to the gateway retracts (longest first, one per pass).
-// Only same-hop-distance edges qualify — removing one can never
-// orphan a node — so the mesh keeps its few best paths plus the
-// short anastomosis shortcuts, and sheds the scenic routes.
-function prunePass(now) {
-  const dist = new Array(nodes.length).fill(-1);
-  const q = [gateway]; dist[gateway] = 0;
-  for (let qi = 0; qi < q.length; qi++) {
-    const n = q[qi];
-    for (const ei of nodes[n].edges) {
-      const e = edges[ei];
-      if (!e.alive) continue;
-      const m = e.a === n ? e.b : e.a;
-      if (nodes[m].alive && dist[m] === -1) { dist[m] = dist[n] + 1; q.push(m); }
-    }
-  }
-  // parallel strands between the same pair: keep the shorter, shed the rest
-  const seen = new Map();
-  for (let i = 0; i < edges.length; i++) {
-    const e = edges[i];
-    if (!e.alive || !nodes[e.a].alive || !nodes[e.b].alive) continue;
-    const key = Math.min(e.a, e.b) * 100000 + Math.max(e.a, e.b);
-    const prior = seen.get(key);
-    if (prior === undefined) { seen.set(key, i); continue; }
-    const drop = edges[prior].len > e.len ? prior : i;
-    if (drop === prior) seen.set(key, i);
-    edges[drop].alive = false; edges[drop].prunedAt = now; dirty = true;
-  }
-  let worst = -1, worstLen = 0;
-  for (let i = 0; i < edges.length; i++) {
-    const e = edges[i];
-    if (!e.alive || !nodes[e.a].alive || !nodes[e.b].alive) continue;
-    if (dist[e.a] === -1 || dist[e.a] !== dist[e.b]) continue;
-    if (e.len > P.nodeSpacing * 1.35 && e.len > worstLen) { worst = i; worstLen = e.len; }
-  }
-  if (worst >= 0) { edges[worst].alive = false; edges[worst].prunedAt = now; dirty = true; }
+  // retire tips sitting on the corpse
+  for (let t = tips.length - 1; t >= 0; t--)
+    if (dist2(tips[t].x, tips[t].y, nodes[i].x, nodes[i].y) < P.mergeRadius * P.mergeRadius)
+      tips.splice(t, 1);
+  routeDirty = true;                // re-route: orphaned children find new parents
 }
 function killRandomNode() {
-  const candidates = [];
+  const cands = [];
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
-    if (n.alive && i !== gateway && n.edges.length >= 2 &&
-        dist2(n.x, n.y, nodes[gateway].x, nodes[gateway].y) > 150 * 150)
-      candidates.push(i);
+    if (n.alive && !n.isGateway && isFinite(n.hops) && n.hops >= 1) cands.push(i);
   }
-  if (!candidates.length) return;
-  killNode(candidates[Math.floor(Math.random() * candidates.length)]);
+  if (cands.length) killNode(cands[Math.floor(Math.random() * cands.length)]);
 }
 
 // ── rendering ─────────────────────────────────────────────────────
-function drawEdge(c, e) {
-  c.strokeStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${0.12 + P.glow * 0.38})`;
-  c.lineWidth = 1.1;
-  c.beginPath();
-  c.moveTo(e.pts[0][0], e.pts[0][1]);
-  for (let i = 1; i < e.pts.length; i++) c.lineTo(e.pts[i][0], e.pts[i][1]);
-  c.stroke();
+function drawLinks() {
+  // every primary radio link, batched into a single stroke
+  ctx.strokeStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${0.1 + P.glow * 0.4})`;
+  ctx.lineWidth = 1.0;
+  ctx.beginPath();
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (!n.alive || n.parent < 0) continue;
+    const p = nodes[n.parent];
+    if (!p || !p.alive) continue;
+    ctx.moveTo(n.x, n.y); ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
 }
-function redrawStatic() {
-  offCtx.clearRect(0, 0, W, H);
-  for (const e of edges) if (e.alive) drawEdge(offCtx, e);
-  dirty = false;
+function drawGateway(n, now) {
+  const breathe = 0.5 + 0.3 * Math.sin(now / 900 + n.phase);
+  const lit = Math.min(n.lit, 1.4);
+  // soft halo
+  ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${0.05 + 0.05 * breathe + lit * 0.06})`;
+  ctx.beginPath(); ctx.arc(n.x, n.y, 17, 0, 7); ctx.fill();
+  // ring
+  ctx.strokeStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${0.45 + 0.3 * breathe})`;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(n.x, n.y, 7.6, 0, 7); ctx.stroke();
+  // hot core
+  ctx.fillStyle = `rgba(${HOT.r},${HOT.g},${HOT.b},0.95)`;
+  ctx.beginPath(); ctx.arc(n.x, n.y, 3.5 + lit * 1.4, 0, 7); ctx.fill();
 }
 function render(now) {
   ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(off, 0, 0, W, H);
+  drawLinks();
   ctx.globalCompositeOperation = "lighter";
 
-  // pruned strands retract: a brief amber fade, then gone
-  for (const e of edges) {
-    if (!e.prunedAt) continue;
-    const f = 1 - (now - e.prunedAt) / 1600;
-    if (f <= 0) { e.prunedAt = 0; continue; }
-    ctx.strokeStyle = `rgba(216,178,74,${0.35 * f})`;
-    ctx.lineWidth = 1.1;
-    ctx.beginPath();
-    ctx.moveTo(e.pts[0][0], e.pts[0][1]);
-    for (let k = 1; k < e.pts.length; k++) ctx.lineTo(e.pts[k][0], e.pts[k][1]);
-    ctx.stroke();
-  }
-
-  // nodes: faint breathing shimmer; bright when relaying
+  // nodes: faint breathing shimmer; bright when relaying. Gateways special.
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
     if (!n.alive) {
@@ -603,9 +503,11 @@ function render(now) {
       }
       continue;
     }
+    if (n.isGateway) { drawGateway(n, now); n.lit = Math.max(0, n.lit - 0.04); continue; }
+    const unhomed = !isFinite(n.hops);
     const breathe = 0.26 + 0.12 * Math.sin(now / 1400 + n.phase);
-    const a = Math.min(breathe + n.lit * 0.85, 1);
-    const r = i === gateway ? 3.2 : 1.6 + n.lit * 2.2;
+    const a = unhomed ? 0.14 : Math.min(breathe + n.lit * 0.85, 1);
+    const r = 1.6 + n.lit * 2.2;
     ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${a})`;
     ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 7); ctx.fill();
     n.lit = Math.max(0, n.lit - 0.035);
@@ -632,29 +534,34 @@ function frame(now) {
   prev = now;
 
   stepTips(dt);
+  if (now - lastGateway > P.gatewayEverySec * 1000) {
+    if (gatewayCount() < gatewayTarget()) addGateway();
+    lastGateway = now;
+  }
+  if (now - lastDeath > P.deathEverySec * 1000) { killRandomNode(); lastDeath = now; }
+  if (routeDirty || now - lastRoute > P.routeMs) { recomputeRouting(); lastRoute = now; }
   if (now - lastPulse > 60000 / Math.max(P.pulsesPerMin * 6, 1)) { spawnPulse(); lastPulse = now; }
   stepPulses(dt);
-  if (now - lastDeath > P.deathEverySec * 1000) { killRandomNode(); lastDeath = now; }
-  if (now - lastBond > 800) { bondPass(); lastBond = now; }
-  if (now - lastPrune > 4000) { prunePass(now); lastPrune = now; }
-  if (dirty) redrawStatic();
   render(now);
 
-  // fps meter (rolling 0.5 s)
+  // meters (rolling 0.5 s)
   fpsAcc += dt; fpsN++;
   if (now - fpsAt > 500) {
     document.getElementById("fps").textContent = Math.round(fpsN / fpsAcc) + " fps";
+    const g = gatewayCount();
+    document.getElementById("gwc").textContent = g + (g === 1 ? " gw" : " gws");
     fpsAcc = 0; fpsN = 0; fpsAt = now;
   }
   requestAnimationFrame(frame);
 }
 
 function seed() {
-  nodes = []; edges = []; tips = []; pulses = []; dirty = true;
-  // gateway sits right-of-center so hero copy (left) breathes
-  gateway = addNode(W * 0.62, H * 0.48);
-  for (let i = 0; i < 5; i++) spawnTip(gateway, (i / 5) * Math.PI * 2 + rand(-0.2, 0.2));
-  redrawStatic();
+  nodes = []; tips = []; pulses = []; routeDirty = true;
+  lastGateway = performance.now();           // stagger the first new gateway
+  // first gateway sits right-of-center so hero copy (left) breathes
+  const g = addNode(W * 0.62, H * 0.48, true);
+  for (let i = 0; i < 5; i++) spawnTip(g, (i / 5) * Math.PI * 2 + rand(-0.2, 0.2));
+  recomputeRouting();
 }
 
 // reduced motion: grow the whole organism invisibly, draw one still
@@ -662,38 +569,37 @@ function growStatic() {
   running = false; staticMode = true;
   document.getElementById("rmNote").hidden = false;
   seed();
-  const saveCap = P.nodeCap;
-  for (let i = 0; i < 4000 && nodes.length < saveCap; i++) {
+  for (let i = 0; i < 5000 && aliveCount(false) < P.nodeCap; i++) {
     stepTips(1 / 30);
-    if (i % 150 === 0) bondPass();
+    if (i % 280 === 0 && gatewayCount() < gatewayTarget()) addGateway();
   }
-  redrawStatic();
+  while (gatewayCount() < gatewayTarget()) addGateway();
+  recomputeRouting();
   ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(off, 0, 0, W, H);
+  drawLinks();
   for (const n of nodes) {
     if (!n.alive) continue;
-    ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},0.28)`;
-    ctx.beginPath(); ctx.arc(n.x, n.y, n === nodes[gateway] ? 3.2 : 1.6, 0, 7); ctx.fill();
+    if (n.isGateway) { drawGateway(n, performance.now()); continue; }
+    ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${isFinite(n.hops) ? 0.3 : 0.14})`;
+    ctx.beginPath(); ctx.arc(n.x, n.y, 1.6, 0, 7); ctx.fill();
   }
 }
 
 // ── wiring ────────────────────────────────────────────────────────
 addEventListener("pointermove", e => {
   mouse.x = e.clientX; mouse.y = e.clientY;
-  // crosshair when hovering a killable node — invites the click
   if (!staticMode) {
-    const near = nearNode(mouse.x, mouse.y, 16, gateway);
-    canvas.style.cursor = near >= 0 ? "crosshair" : "default";
+    const near = nearNode(mouse.x, mouse.y, 16);
+    canvas.style.cursor = (near >= 0 && !nodes[near].isGateway) ? "crosshair" : "default";
   }
 });
-// Click a node to kill it and watch the mesh route around the loss —
-// the reliability story as a toy. The gateway is immune (there'd be
-// nothing to route TO), and clicks land on the canvas only where no
-// UI element (CTAs, panel) sits above it.
+// Click a node to kill it and watch its children re-home to other
+// in-range neighbours — the reliability story as a toy. Gateways are
+// immune (they're the hubs everything routes toward).
 canvas.addEventListener("pointerdown", e => {
   if (staticMode) return;
-  const hit = nearNode(e.clientX, e.clientY, 16, gateway);
-  if (hit >= 0 && nodes[hit].alive) {
+  const hit = nearNode(e.clientX, e.clientY, 16);
+  if (hit >= 0 && nodes[hit].alive && !nodes[hit].isGateway) {
     killNode(hit);
     const h = document.getElementById("hint");
     if (h) { h.style.transition = "opacity .8s"; h.style.opacity = "0";
@@ -713,6 +619,7 @@ const SLIDERS = [
   ["pSpeed", "vSpeed", "tipSpeed", 1],
   ["pBranch", "vBranch", "branchPct", 1],
   ["pCap", "vCap", "nodeCap", 1],
+  ["pRange", "vRange", "range", 1],
   ["pPulse", "vPulse", "pulsesPerMin", 1],
   ["pPull", "vPull", "cursorPull", 0.01],
   ["pGlow", "vGlow", "glow", 0.01],
@@ -726,7 +633,7 @@ for (const [id, vid, key, scale] of SLIDERS) {
   el.addEventListener("input", () => {
     P[key] = el.value * scale;
     out.textContent = el.value;
-    if (id === "pGlow") dirty = true;
+    if (id === "pRange") routeDirty = true;
     const store = {};
     for (const [sid] of SLIDERS) store[sid] = document.getElementById(sid).value;
     localStorage.setItem("mycelium-tuning", JSON.stringify(store));
