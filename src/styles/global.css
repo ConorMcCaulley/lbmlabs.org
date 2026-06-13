@@ -19,13 +19,14 @@ body {
 
 h1, h2, h3 {
   font-family: var(--font-display);
-  line-height: 1.12;
+  line-height: 1.1;
   letter-spacing: -0.015em;
   margin: 0 0 var(--s-4);
   color: var(--text);
 }
-h1 { font-size: var(--t-display); font-weight: 600; max-width: 16ch; }
-h2 { font-size: var(--t-h2); font-weight: 560; max-width: 22ch; }
+/* weights/sizing matched to the original hero build (clean sans, 650) */
+h1 { font-size: var(--t-display); font-weight: 650; max-width: 14ch; }
+h2 { font-size: var(--t-h2); font-weight: 640; max-width: 22ch; }
 h3 { font-size: var(--t-h3); font-weight: 600; }
 
 p { margin: 0 0 var(--s-4); max-width: var(--w-text); color: var(--text); }
@@ -40,8 +41,10 @@ strong { font-weight: 600; }
 /* the load-bearing signal: a kicker label above each section, in mono */
 .kicker {
   font-family: var(--font-mono);
-  font-size: var(--t-small);
-  letter-spacing: 0.04em;
+  font-size: 13px;            /* matched to the original hero kicker */
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
   color: var(--accent);
   margin: 0 0 var(--s-4);
 }
