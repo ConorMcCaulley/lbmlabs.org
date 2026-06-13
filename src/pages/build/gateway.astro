@@ -21,8 +21,7 @@ const steps = [
   { h: "Set up the Pi", b: "Flash Pi OS Lite 64-bit, clone the repo, and run <code>gateway/setup.sh</code>. It installs the Python venv (RNS + requests), a udev rule that pins the TTGO as <code>/dev/rnode</code>, the app at <code>/opt/mycelium-network-gateway/</code>, and the policy config at <code>/etc/mycelium-network-gateway/config.toml</code>, then enables (but doesn't start) the <code>rnsd</code> and <code>egress-gateway</code> services. It's idempotent — safe to re-run if anything drifts." },
   { h: "Flash + plug the radio", b: "Flash a TTGO with RNode firmware (laptop-side), plug it into the Pi, and verify it appears: <code>ls -la /dev/rnode</code>. Antenna on first — always." },
   { h: "Point it at your destination", b: "Edit <code>/etc/mycelium-network-gateway/config.toml</code>: the <code>allowed_hosts</code> the gateway may forward to (e.g. <code>script.google.com</code> for a Google Sheet via Apps Script), the per-identity <code>max_requests_per_window</code> rate limit, and <code>announce_interval</code>. The file is re-read live — no restart, no dropped requests." },
-  { h: "Start it", b: "<code>sudo systemctl start rnsd egress-gateway</code>, then <code>journalctl -u egress-gateway -f</code>. The gateway announces itself on the network and waits — and prints its <strong>identity hash</strong>, which you'll need next." },
-  { h: "Pair the leaf", b: "Copy the gateway's identity hash from the journal into the leaf's config (<code>gateway_identity_hash</code>). That's the pairing: the leaf hears the gateway's announce, its LED goes from the slow-blink <em>discovering</em> to a steady link, and it starts delivering. A <code>temp_c</code> row lands in your Sheet." },
+  { h: "Start it", b: "<code>sudo systemctl start rnsd egress-gateway</code>, then <code>journalctl -u egress-gateway -f</code>. The gateway announces itself on the network and waits — and prints its <strong>identity hash</strong>, which is how a leaf will find and trust it. Keep that hash handy for pairing." },
 ];
 ---
 <Base title="Build guide — the gateway" description="Step-by-step: build and pair a Mycelium gateway. A Pi you supply plus a LoRa radio that carries sealed readings from the mesh to a destination you own.">
@@ -70,13 +69,11 @@ const steps = [
       </ol>
 
       <div class="prove">
-        <h3>Prove the pair works</h3>
-        <p>Watch a reading travel the whole path — leaf seals it, the radio carries
-        it, the gateway forwards it, a row appears in your Sheet. Then the real
-        test: <strong>pull the gateway's power mid-batch.</strong> The leaf keeps
-        sampling and buffers to disk; restore power and everything drains, in
-        order, nothing lost. That's the gateway-outage drill — and there's a
-        script in the repo that runs it for you.</p>
+        <h3>Next: pair it with a leaf</h3>
+        <p>The gateway is up and announcing, with its identity hash in the journal.
+        Hand that hash to a leaf and the whole network comes alive — a reading
+        travels the entire path to your spreadsheet, and you can run the
+        outage drill. <a href={`${base}/build/pairing`}>Pair your nodes →</a></p>
       </div>
 
       <h2>Troubleshooting</h2>
@@ -87,17 +84,17 @@ const steps = [
       </ul>
 
       <h2>What this proves — and what it doesn't</h2>
-      <p><strong>Proves:</strong> the full delivery path leaf → gateway → your
-      destination, the gateway's security policy (host allowlist, per-identity
-      rate limit, size cap), auto-discovery by announce, and the outage
-      buffer-and-drain — all on the bench.</p>
+      <p><strong>Proves:</strong> the gateway's forwarding policy (host allowlist,
+      per-identity rate limit, size cap) and that it's up and announcing on the
+      network. The full end-to-end delivery and the outage drill come when you
+      <a href={`${base}/build/pairing`}>pair a leaf</a> to it.</p>
       <p class="dim"><strong>Doesn't prove:</strong> multi-hop relay across several
       nodes, real-world radio range, or power — those come with more nodes and the
       field build, once they've survived real weather.</p>
 
       <div class="ctas">
-        <a class="btn-primary" href={`${base}/build`}>← Back to Build</a>
-        <a class="btn-ghost" href={`${base}/build/bench-leaf`}>The bench leaf guide →</a>
+        <a class="btn-primary" href={`${base}/build/pairing`}>Next: pair your nodes →</a>
+        <a class="btn-ghost" href={`${base}/build`}>← Back to Build</a>
       </div>
     </div>
   </article>

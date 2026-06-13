@@ -98,6 +98,12 @@ const tiers = [
     </div>
   </section>
 
+  <section class="connect">
+    <div class="wrap narrow">
+      <p class="connect-line">Built a leaf and a gateway? <a href={gatewayGuide.replace("/gateway", "/pairing")}>Pair them →</a> — one identity hash, and the network comes alive.</p>
+    </div>
+  </section>
+
   <section class="after" data-theme="paper">
     <div class="wrap narrow">
       <h2>After the build</h2>
@@ -147,6 +153,10 @@ const tiers = [
   .tier-rows dd { margin: 0; color: var(--ink); }
   .tier-rows a { color: var(--accent); }
   .tier-rule { margin-top: var(--s-4); color: var(--amber); }
+
+  .connect { padding: var(--s-5) 8vw var(--s-6); text-align: center; }
+  .connect-line { color: var(--dim); max-width: none; }
+  .connect-line a { color: var(--accent); }
 
   .after .ctas { margin-top: var(--s-5); align-items: center; }
   .after .btn-ghost { color: var(--accent-deep); }
