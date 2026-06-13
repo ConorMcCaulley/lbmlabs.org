@@ -235,6 +235,8 @@ const P = {
   // travel time (linkGrowSpeed) supplies most of the organic delay.
   regrowLossMin: 0.1, regrowLossMax: 0.5,
   regrowNewMin: 0.02, regrowNewMax: 0.18,
+  migrateDelayMin: 0.35, migrateDelayMax: 1.4,  // stagger before migrating to a newly-better route
+
   linkGrowSpeed: 130,  // px/sec a connection strand reaches toward its target
   linkWander: 0.55,    // how hard the soil-density field deflects the path
   soilScale: 0.05,     // spatial frequency of the "soil" field (1/px) — smaller = longer waves
@@ -306,7 +308,7 @@ function addNode(x, y, isGateway) {
   nodes.push({ x, y, alive: true, isGateway: gw,
                connected: gw, hops: gw ? 0 : Infinity, cost: gw ? 0 : Infinity, parent: -1,
                link: null, grow: null,
-               lostAt: gw ? 0 : now, regrowDelay: rand(P.regrowNewMin, P.regrowNewMax),
+               lostAt: gw ? 0 : now, regrowDelay: rand(P.regrowNewMin, P.regrowNewMax), upgradeAt: 0,
                lit: 0, glowOn: false, phase: rand(0, Math.PI * 2), bornAt: now, diedAt: 0 });
   routeDirty = true;
   return nodes.length - 1;
@@ -455,7 +457,15 @@ function planGrowth(now) {
       if (m.lostAt === 0) { m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax); }
       if (now - m.lostAt >= m.regrowDelay * 1000) startGrow(i, best);
     } else if (bestCost < m.cost - 0.2) {
-      startGrow(i, best);                                // sensed a meaningfully better route → grow it first
+      // sensed a better route — but don't flip instantly. Wait a small
+      // staggered delay first, so the migration grows OUTWARD gradually:
+      // a node further out only sees the shorter path once its upstream
+      // neighbours have actually switched (their cost drops), and the new
+      // strand reaches before the old link is cut — the regrowth pattern.
+      if (m.upgradeAt === 0) m.upgradeAt = now + rand(P.migrateDelayMin, P.migrateDelayMax) * 1000;
+      else if (now >= m.upgradeAt) { startGrow(i, best); m.upgradeAt = 0; }
+    } else if (m.upgradeAt !== 0) {
+      m.upgradeAt = 0;                                   // route no longer better → cancel pending migration
     }
   }
 }
