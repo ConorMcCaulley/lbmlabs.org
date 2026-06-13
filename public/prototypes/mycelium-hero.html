@@ -264,6 +264,13 @@ function addEdge(a, b, pts) {
   drawEdge(offCtx, e); // append-only: no full redraw while growing
   return idx;
 }
+function linkedAlive(a, b) {
+  for (const ei of nodes[a].edges) {
+    const e = edges[ei];
+    if (e.alive && (e.a === b || e.b === b)) return true;
+  }
+  return false;
+}
 function nearNode(x, y, r, exclude) {
   // O(n) scan is fine at this scale (≤ ~900 nodes, called per node-drop)
   const r2 = r * r;
@@ -368,7 +375,11 @@ function finishTip(tIdx, nodeIdx) {
   // the strand must land ON the node it fuses with — without this,
   // merge-radius fusions left lines stopping up to 11px short
   if (tip.x !== n.x || tip.y !== n.y) tip.pts.push([n.x, n.y]);
-  if (tip.pts.length > 1) addEdge(tip.origin, nodeIdx, tip.pts);
+  // never lay a second strand between an already-linked pair — the
+  // redundant path evaporates undrawn (it was the source of the
+  // "doubled lines, slightly different paths" artifact)
+  if (tip.pts.length > 1 && tip.origin !== nodeIdx && !linkedAlive(tip.origin, nodeIdx))
+    addEdge(tip.origin, nodeIdx, tip.pts);
   tips.splice(tIdx, 1);
 }
 
@@ -489,12 +500,7 @@ function bondPass() {
     if (!nodes[i].alive) continue;
     for (let j = i + 1; j < nodes.length && made < 2; j++) {
       if (!nodes[j].alive || dist2(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y) > r2) continue;
-      let linked = false;
-      for (const ei of nodes[i].edges) {
-        const e = edges[ei];
-        if (e.alive && (e.a === j || e.b === j)) { linked = true; break; }
-      }
-      if (linked) continue;
+      if (linkedAlive(i, j)) continue;
       const mx = (nodes[i].x + nodes[j].x) / 2 + rand(-3, 3);
       const my = (nodes[i].y + nodes[j].y) / 2 + rand(-3, 3);
       addEdge(i, j, [[nodes[i].x, nodes[i].y], [mx, my], [nodes[j].x, nodes[j].y]]);
@@ -520,6 +526,18 @@ function prunePass(now) {
       const m = e.a === n ? e.b : e.a;
       if (nodes[m].alive && dist[m] === -1) { dist[m] = dist[n] + 1; q.push(m); }
     }
+  }
+  // parallel strands between the same pair: keep the shorter, shed the rest
+  const seen = new Map();
+  for (let i = 0; i < edges.length; i++) {
+    const e = edges[i];
+    if (!e.alive || !nodes[e.a].alive || !nodes[e.b].alive) continue;
+    const key = Math.min(e.a, e.b) * 100000 + Math.max(e.a, e.b);
+    const prior = seen.get(key);
+    if (prior === undefined) { seen.set(key, i); continue; }
+    const drop = edges[prior].len > e.len ? prior : i;
+    if (drop === prior) seen.set(key, i);
+    edges[drop].alive = false; edges[drop].prunedAt = now; dirty = true;
   }
   let worst = -1, worstLen = 0;
   for (let i = 0; i < edges.length; i++) {
