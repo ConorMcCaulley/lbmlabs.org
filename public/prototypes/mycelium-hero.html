@@ -145,7 +145,7 @@
   <label>branchiness <span class="val" id="vBranch"></span><input type="range" id="pBranch" min="5" max="70" value="34"></label>
   <label>density cap <span class="val" id="vCap"></span><input type="range" id="pCap" min="120" max="900" value="374"></label>
   <label>radio range <span class="val" id="vRange"></span><input type="range" id="pRange" min="70" max="220" value="118"></label>
-  <label>pulse rate <span class="val" id="vPulse"></span><input type="range" id="pPulse" min="2" max="60" value="18"></label>
+  <label>read chance <span class="val" id="vRead"></span><input type="range" id="pRead" min="0" max="100" value="33"></label>
   <label>pulse speed <span class="val" id="vSpd"></span><input type="range" id="pSpd" min="50" max="380" value="165"></label>
   <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="21"></label>
   <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="15"></label>
@@ -215,7 +215,8 @@ const P = {
   branchPct: 34,       // % chance to branch at each new node
   nodeCap: 374,        // stop growing past this many (non-gateway) nodes
   range: 118,          // px radio range — who can hear whom
-  pulsesPerMin: 18,    // how often nodes take/relay a reading
+  readEverySec: 4,     // synchronized read cycle — every node rolls together
+  readChance: 0.33,    // ...with this probability each cycle (~1 in 3)
   pulseSpeed: 165,     // px/sec a reading travels along its link
   cursorPull: 0.21,    // 0..1 nutrient attraction strength
   glow: 0.15,          // link brightness
@@ -246,7 +247,7 @@ let pulses = [];    // {path,seg,t,speed} traveling, or {held,holder} spooled at
 let retracting = []; // {pts,t0} — links fading out after a break/upgrade
 let budAccum = 0;   // fractional node-budding accumulator
 let mouse = { x: -1e4, y: -1e4 };
-let lastDeath = 0, lastPulse = 0, lastGateway = 0, lastRoute = 0;
+let lastDeath = 0, lastRead = 0, lastGateway = 0, lastRoute = 0;
 let routeDirty = true, running = true, staticMode = false;
 // Lit persistence (toggled in the panel). Relays ALWAYS just pulse briefly
 // as they receive + retransmit — never stay lit. The toggle only controls
@@ -561,23 +562,25 @@ function addGateway() {
 }
 
 // ── traffic ───────────────────────────────────────────────────────
-function spawnPulse() {
-  if (pulses.length > 60) return;          // bound spool accumulation during outages
-  // mild bias to distant nodes for visible travel, but enough variety that
-  // lots of different nodes take readings
-  let pick = -1, pickHops = -1;
-  for (let s = 0; s < 3; s++) {
-    const i = Math.floor(Math.random() * nodes.length);
-    const n = nodes[i];
-    if (!n.alive || n.isGateway || !isFinite(n.hops) || n.hops < 1) continue;
-    if (n.hops > pickHops) { pickHops = n.hops; pick = i; }
-  }
-  if (pick < 0) return;
-  const path = pathToGateway(pick);
+// One node emits a reading toward its gateway.
+function spawnPulseFrom(i) {
+  if (pulses.length > 300) return;         // bound accumulation (e.g. a long outage)
+  const n = nodes[i];
+  if (!n.alive || n.isGateway || !n.connected || !isFinite(n.hops) || n.hops < 1) return;
+  const path = pathToGateway(i);
   if (!path) return;
   pulses.push({ path, seg: 0, t: 0, speed: P.pulseSpeed * rand(0.9, 1.1) });
-  nodes[pick].lit = 1;
-  if (litMode === "stay") nodes[pick].glowOn = true;  // reading source stays lit (in 'stay' mode)
+  n.lit = 1;
+  if (litMode === "stay") n.glowOn = true; // reading source stays lit (in 'stay' mode)
+}
+// Synchronized read: on each cycle every node rolls 1/3 to release a
+// reading at the same moment, so they travel to the gateways in a wave.
+function readBurst() {
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (n.alive && !n.isGateway && n.connected && isFinite(n.hops) && n.hops >= 1
+        && Math.random() < P.readChance) spawnPulseFrom(i);
+  }
 }
 function stepPulses(dt) {
   for (let i = pulses.length - 1; i >= 0; i--) {
@@ -761,7 +764,7 @@ function frame(now) {
   if (now - lastDeath > P.deathEverySec * 1000) { killRandomNode(); lastDeath = now; }
   if (routeDirty || now - lastRoute > P.routeMs) { maintainRouting(now); lastRoute = now; }
   stepLinkGrowth(dt, now);
-  if (now - lastPulse > 60000 / Math.max(P.pulsesPerMin * 12, 1)) { spawnPulse(); lastPulse = now; }
+  if (now - lastRead > P.readEverySec * 1000) { readBurst(); lastRead = now; }
   stepPulses(dt);
   render(now);
 
@@ -778,7 +781,7 @@ function frame(now) {
 
 function seed() {
   nodes = []; pulses = []; retracting = []; routeDirty = true; budAccum = 0;
-  lastGateway = performance.now();           // stagger the first new gateway
+  lastGateway = lastRead = performance.now();  // stagger the first gateway + read
   // first gateway sits right-of-center so hero copy (left) breathes; the
   // colony buds outward and wires itself up organically from here
   addNode(W * 0.62, H * 0.48, true);
@@ -841,7 +844,7 @@ const SLIDERS = [
   ["pBranch", "vBranch", "branchPct", 1],
   ["pCap", "vCap", "nodeCap", 1],
   ["pRange", "vRange", "range", 1],
-  ["pPulse", "vPulse", "pulsesPerMin", 1],
+  ["pRead", "vRead", "readChance", 0.01],
   ["pSpd", "vSpd", "pulseSpeed", 1],
   ["pPull", "vPull", "cursorPull", 0.01],
   ["pGlow", "vGlow", "glow", 0.01],
