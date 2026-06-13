@@ -215,6 +215,8 @@ const P = {
   branchPct: 34,       // % chance to branch at each new node
   nodeCap: 374,        // stop growing past this many (non-gateway) nodes
   range: 118,          // px radio range — who can hear whom
+  signalPenalty: 2.2,  // extra route-cost for a hop at the very edge of range
+  signalExp: 6,        // how sharply that penalty ramps up near max range
   readEverySec: 4,     // synchronized read cycle — every node rolls together
   readChance: 0.33,    // ...with this probability each cycle (~1 in 3)
   pulseSpeed: 165,     // px/sec a reading travels along its link
@@ -302,7 +304,7 @@ addEventListener("resize", resize);
 function addNode(x, y, isGateway) {
   const gw = !!isGateway, now = performance.now();
   nodes.push({ x, y, alive: true, isGateway: gw,
-               connected: gw, hops: gw ? 0 : Infinity, parent: -1,
+               connected: gw, hops: gw ? 0 : Infinity, cost: gw ? 0 : Infinity, parent: -1,
                link: null, grow: null,
                lostAt: gw ? 0 : now, regrowDelay: rand(P.regrowNewMin, P.regrowNewMax),
                lit: 0, glowOn: false, phase: rand(0, Math.PI * 2), bornAt: now, diedAt: 0 });
@@ -383,6 +385,15 @@ function stepLinkGrowth(dt, now) {
   }
 }
 
+// Route cost of a single hop: a base of 1 (hop count dominates) plus a
+// signal penalty that's negligible for short/mid links and climbs steeply
+// only at the very edge of range — so a weak edge-of-range hop is taken
+// only when it genuinely shortens the path.
+function linkCost(d) {
+  const f = Math.min(d / P.range, 1);
+  return 1 + P.signalPenalty * Math.pow(f, P.signalExp);
+}
+
 // Connectivity flows ONLY through established links: a node is connected
 // iff it is a gateway or its established parent is connected. Anything cut
 // off loses its link (which retracts) and starts searching.
@@ -392,8 +403,8 @@ function recomputeConnectivity(now) {
   for (let i = 0; i < N; i++) {
     const n = nodes[i]; kids[i] = [];
     n._wasConn = n.connected;
-    if (n.isGateway) { n.connected = n.alive; n.hops = 0; }
-    else { n.connected = false; n.hops = Infinity; }
+    if (n.isGateway) { n.connected = n.alive; n.hops = 0; n.cost = 0; }
+    else { n.connected = false; n.hops = Infinity; n.cost = Infinity; }
   }
   for (let i = 0; i < N; i++) {
     const n = nodes[i];
@@ -405,7 +416,9 @@ function recomputeConnectivity(now) {
     const p = q[qi];
     for (const c of kids[p]) {
       if (nodes[c].alive && !nodes[c].connected) {
-        nodes[c].connected = true; nodes[c].hops = nodes[p].hops + 1; q.push(c);
+        nodes[c].connected = true; nodes[c].hops = nodes[p].hops + 1;
+        nodes[c].cost = nodes[p].cost + linkCost(Math.hypot(nodes[c].x - nodes[p].x, nodes[c].y - nodes[p].y));
+        q.push(c);
       }
     }
   }
@@ -425,20 +438,24 @@ function planGrowth(now) {
   for (let i = 0; i < N; i++) {
     const m = nodes[i];
     if (!m.alive || m.isGateway || m.grow) continue;     // already growing → let it finish
-    let best = -1, bh = Infinity, bd = Infinity;
+    // pick the least-cost uplink: hop count dominates, but an edge-of-range
+    // (weak-signal) hop is penalised — so a closer node with stronger signal
+    // and a still-short path can win the trade-off.
+    let best = -1, bestCost = Infinity, bd = Infinity;
     for (let j = 0; j < N; j++) {
       const n = nodes[j];
       if (!n.alive || !n.connected || j === i) continue;
       const dd = dist2(m.x, m.y, n.x, n.y);
       if (dd > R2) continue;
-      if (n.hops < bh || (n.hops === bh && dd < bd)) { bh = n.hops; bd = dd; best = j; }
+      const d = Math.sqrt(dd), c = n.cost + linkCost(d);
+      if (c < bestCost - 1e-6 || (Math.abs(c - bestCost) <= 1e-6 && d < bd)) { bestCost = c; bd = d; best = j; }
     }
     if (best < 0) continue;                              // nothing connected in range yet → keep searching
     if (!m.connected) {
       if (m.lostAt === 0) { m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax); }
       if (now - m.lostAt >= m.regrowDelay * 1000) startGrow(i, best);
-    } else if (bh + 1 < m.hops) {
-      startGrow(i, best);                                // sensed a better route → grow it before dropping the old
+    } else if (bestCost < m.cost - 0.2) {
+      startGrow(i, best);                                // sensed a meaningfully better route → grow it first
     }
   }
 }
@@ -454,8 +471,8 @@ function settleRoutingInstant() {
   const N = nodes.length, R2 = P.range * P.range;
   for (let i = 0; i < N; i++) {
     const n = nodes[i];
-    n.hops = Infinity; n.parent = -1; n.connected = false; n.link = null; n.grow = null;
-    if (n.alive && n.isGateway) { n.hops = 0; n.connected = true; n.lostAt = 0; }
+    n.hops = Infinity; n.cost = Infinity; n.parent = -1; n.connected = false; n.link = null; n.grow = null;
+    if (n.alive && n.isGateway) { n.hops = 0; n.cost = 0; n.connected = true; n.lostAt = 0; }
   }
   const q = [];
   for (let i = 0; i < N; i++) if (nodes[i].alive && nodes[i].isGateway) q.push(i);
@@ -465,7 +482,7 @@ function settleRoutingInstant() {
       const mm = nodes[m];
       if (m === ni || !mm.alive || mm.hops <= nh) continue;
       if (dist2(n.x, n.y, mm.x, mm.y) > R2) continue;
-      mm.hops = nh; mm.connected = true; mm.lostAt = 0; q.push(m);
+      mm.hops = nh; mm.cost = nh; mm.connected = true; mm.lostAt = 0; q.push(m);
     }
   }
   for (let i = 0; i < N; i++) {
