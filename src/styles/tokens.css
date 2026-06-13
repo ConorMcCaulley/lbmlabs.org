@@ -29,8 +29,8 @@
 
   /* type families — Conor preferred the original hero's clean sans
      headline over a serif (June 2026), so display = the grotesque. */
-  --font-display: "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --font-display: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --font-body: "Inter Variable", "Inter", system-ui, -apple-system, "Helvetica Neue", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* type scale (fluid) */

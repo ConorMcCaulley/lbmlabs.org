@@ -1,12 +1,16 @@
 ---
 /* Base layout — head, fonts, global styles.
    Fonts: Inter (display + body) / IBM Plex Mono (evidence), per
-   design-tokens.md. Conor preferred the original hero's clean sans
-   headline over a serif, so no Fraunces. Loaded from Google Fonts for
-   this review build; TODO E-phase: self-host via @fontsource. */
+   design-tokens.md. SELF-HOSTED via @fontsource — no third-party request
+   (the site claims no analytics / no third parties, so it shouldn't ping
+   Google Fonts), and faster. */
+import "@fontsource-variable/inter";          // variable, covers 400–700 incl. the 650 headline
+import "@fontsource/ibm-plex-mono/latin-400.css";
+import "@fontsource/ibm-plex-mono/latin-500.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const {
   title = "Mycelium — the network for the Earth",
   description = "A free, open, encrypted telemetry mesh anyone can build. Ground truth for the places that need protecting, owned by no one.",
@@ -25,12 +29,7 @@ const {
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta name="theme-color" content="#0c120e" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400..700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
