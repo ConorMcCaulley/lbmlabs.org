@@ -217,6 +217,8 @@ const P = {
   range: 118,          // px radio range — who can hear whom
   signalPenalty: 2.2,  // extra route-cost for a hop at the very edge of range
   signalExp: 6,        // how sharply that penalty ramps up near max range
+  brushRadius: 18,     // px: if a link would skim this close to another node, connect to it
+  fuseExtraHops: 3,    // ...but only if that detour adds at most this many hops
   readEverySec: 4,     // synchronized read cycle — every node rolls together
   readChance: 0.33,    // ...with this probability each cycle (~1 in 3)
   pulseSpeed: 165,     // px/sec a reading travels along its link
@@ -434,38 +436,63 @@ function recomputeConnectivity(now) {
     if (!n.connected && n._wasConn) { n.lostAt = now; n.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax); }
   }
 }
+// Distance² from point (px,py) to segment (ax,ay)-(bx,by).
+function segDist2(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  let t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0;
+  t = clamp(t, 0, 1);
+  return dist2(px, py, ax + t * dx, ay + t * dy);
+}
+// Choose node i's uplink: the least-cost (signal-aware shortest-path)
+// connected neighbour — UNLESS that link would skim really close to
+// another connected node that's only a few hops longer, in which case
+// connect to THAT node instead (looks better than slipping past it).
+// Doing it in selection keeps cost and looks consistent, so no oscillation.
+function chooseParent(i) {
+  const m = nodes[i], N = nodes.length, R2 = P.range * P.range;
+  let t = -1, tCost = Infinity, tD = Infinity;
+  for (let j = 0; j < N; j++) {
+    const n = nodes[j];
+    if (j === i || !n.alive || !n.connected) continue;
+    if (m.connected && n.cost >= m.cost) continue;       // only upstream nodes (cycle-safe)
+    const dd = dist2(m.x, m.y, n.x, n.y);
+    if (dd > R2) continue;
+    const d = Math.sqrt(dd), c = n.cost + linkCost(d);
+    if (c < tCost - 1e-6 || (Math.abs(c - tCost) <= 1e-6 && d < tD)) { tCost = c; tD = d; t = j; }
+  }
+  if (t < 0) return -1;
+  const tg = nodes[t];
+  // does the line m→t skim past a closer upstream node within hop tolerance?
+  let k = -1, kSeg = P.brushRadius * P.brushRadius;
+  for (let j = 0; j < N; j++) {
+    const n = nodes[j];
+    if (j === i || j === t || !n.alive || !n.connected) continue;
+    if (m.connected && n.cost >= m.cost) continue;
+    if (n.hops > tg.hops + P.fuseExtraHops) continue;    // detour would add too many hops
+    if (dist2(m.x, m.y, n.x, n.y) > R2) continue;        // must be in radio range too
+    const sd = segDist2(n.x, n.y, m.x, m.y, tg.x, tg.y);
+    if (sd < kSeg) { kSeg = sd; k = j; }
+  }
+  return k >= 0 ? k : t;
+}
 // Decide what each node should grow toward this tick.
 function planGrowth(now) {
-  const N = nodes.length, R2 = P.range * P.range;
-  for (let i = 0; i < N; i++) {
+  for (let i = 0; i < nodes.length; i++) {
     const m = nodes[i];
     if (!m.alive || m.isGateway || m.grow) continue;     // already growing → let it finish
-    // pick the least-cost uplink: hop count dominates, but an edge-of-range
-    // (weak-signal) hop is penalised — so a closer node with stronger signal
-    // and a still-short path can win the trade-off.
-    let best = -1, bestCost = Infinity, bd = Infinity;
-    for (let j = 0; j < N; j++) {
-      const n = nodes[j];
-      if (!n.alive || !n.connected || j === i) continue;
-      const dd = dist2(m.x, m.y, n.x, n.y);
-      if (dd > R2) continue;
-      const d = Math.sqrt(dd), c = n.cost + linkCost(d);
-      if (c < bestCost - 1e-6 || (Math.abs(c - bestCost) <= 1e-6 && d < bd)) { bestCost = c; bd = d; best = j; }
-    }
-    if (best < 0) continue;                              // nothing connected in range yet → keep searching
+    const best = chooseParent(i);
+    if (best < 0) { m.upgradeAt = 0; continue; }          // nothing connected in range yet
     if (!m.connected) {
       if (m.lostAt === 0) { m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax); }
       if (now - m.lostAt >= m.regrowDelay * 1000) startGrow(i, best);
-    } else if (bestCost < m.cost - 0.2) {
-      // sensed a better route — but don't flip instantly. Wait a small
-      // staggered delay first, so the migration grows OUTWARD gradually:
-      // a node further out only sees the shorter path once its upstream
-      // neighbours have actually switched (their cost drops), and the new
-      // strand reaches before the old link is cut — the regrowth pattern.
+    } else if (best !== m.parent) {
+      // route changed (better gateway, or a closer node the old link skimmed
+      // past) — migrate, staggered + make-before-break: wait a beat, grow the
+      // new strand, then drop the old, so it ripples outward.
       if (m.upgradeAt === 0) m.upgradeAt = now + rand(P.migrateDelayMin, P.migrateDelayMax) * 1000;
       else if (now >= m.upgradeAt) { startGrow(i, best); m.upgradeAt = 0; }
     } else if (m.upgradeAt !== 0) {
-      m.upgradeAt = 0;                                   // route no longer better → cancel pending migration
+      m.upgradeAt = 0;                                    // already on the chosen parent
     }
   }
 }
