@@ -182,9 +182,12 @@
                    hop. Re-evaluated continuously, so a new gateway
                    makes a region re-parent (links flip) live.
      4. TRAFFIC  — pulses relay up the primary links to a gateway.
-     5. EVENTS   — a node dies (periodically / on click); its children
-                   re-home to other in-range neighbours. Healing IS
-                   re-routing — no separate repair system needed.
+     5. EVENTS   — a node OR gateway dies (periodically / on click). Its
+                   region loses signal; in-flight readings SPOOL (held)
+                   at the nodes until a route returns, and connectivity
+                   REGROWS with a staggered per-node delay so healing
+                   ripples outward organically over a few seconds —
+                   toward a surviving gateway, or a newly-born one.
 
    Rendering: primary links are straight strokes batched into one path
    (cheap); nodes, gateways, and pulses draw per-frame with additive
@@ -217,16 +220,22 @@ const P = {
   tipsMax: 18,
   deathEverySec: 30,
   gatewayEverySec: 3,  // cadence of new gateway births
-  maxGateways: 6,      // hard ceiling
+  maxGateways: 5,      // hard ceiling
   nodesPerGateway: 90, // density target: ~1 gateway per this many nodes
-  routeMs: 600,        // how often routing is re-evaluated
+  routeMs: 100,        // how often routing is re-evaluated
+  // Regrowth pacing: a node that loses signal waits this long (its own
+  // random draw) before re-homing, so healing ripples out organically
+  // over a few seconds rather than snapping back. Fresh growth joins
+  // almost instantly so the organism doesn't look laggy as it grows.
+  regrowLossMin: 0.55, regrowLossMax: 1.5,
+  regrowNewMin: 0.04, regrowNewMax: 0.22,
 };
 
 // ── state ─────────────────────────────────────────────────────────
 let W = 0, H = 0, DPR = 1;
-let nodes = [];     // {x,y,alive,isGateway,hops,parent,lit,phase,bornAt,diedAt}
+let nodes = [];     // {x,y,alive,isGateway,connected,hops,parent,lostAt,regrowDelay,lit,phase,bornAt,diedAt}
 let tips = [];      // {x,y,dir,dist}
-let pulses = [];    // {path:[nodeIdx..],seg,t,speed}
+let pulses = [];    // {path,seg,t,speed} traveling, or {held,holder} spooled at a node
 let mouse = { x: -1e4, y: -1e4 };
 let lastDeath = 0, lastPulse = 0, lastGateway = 0, lastRoute = 0;
 let routeDirty = true, running = true, staticMode = false;
@@ -258,8 +267,11 @@ addEventListener("resize", resize);
 
 // ── graph ─────────────────────────────────────────────────────────
 function addNode(x, y, isGateway) {
-  nodes.push({ x, y, alive: true, isGateway: !!isGateway, hops: Infinity, parent: -1,
-               lit: 0, phase: rand(0, Math.PI * 2), bornAt: performance.now(), diedAt: 0 });
+  const gw = !!isGateway, now = performance.now();
+  nodes.push({ x, y, alive: true, isGateway: gw,
+               connected: gw, hops: gw ? 0 : Infinity, parent: -1,
+               lostAt: gw ? 0 : now, regrowDelay: rand(P.regrowNewMin, P.regrowNewMax),
+               lit: 0, phase: rand(0, Math.PI * 2), bornAt: now, diedAt: 0 });
   routeDirty = true;
   return nodes.length - 1;
 }
@@ -272,40 +284,115 @@ function nearNode(x, y, r) {
   return -1;
 }
 
-// Continuous routing: every node homes to the in-range neighbour that
-// gives it the fewest hops to a gateway — the primary link Reticulum
-// keeps live. Multi-source BFS from all gateways assigns hop counts;
-// a second pass picks each node's closest valid parent.
-function recomputeRouting() {
+// Instant settle: full BFS from all gateways, everyone reachable becomes
+// connected at once. Used to seed the network and for the static still —
+// no staggered regrowth, just the resolved tree.
+function settleRoutingInstant() {
   const N = nodes.length, R2 = P.range * P.range;
-  for (let i = 0; i < N; i++) { nodes[i].hops = Infinity; nodes[i].parent = -1; }
-  const q = [];
   for (let i = 0; i < N; i++) {
     const n = nodes[i];
-    if (n.alive && n.isGateway) { n.hops = 0; q.push(i); }
+    n.hops = Infinity; n.parent = -1; n.connected = false;
+    if (n.alive && n.isGateway) { n.hops = 0; n.connected = true; n.lostAt = 0; }
   }
+  const q = [];
+  for (let i = 0; i < N; i++) if (nodes[i].alive && nodes[i].isGateway) q.push(i);
   for (let qi = 0; qi < q.length; qi++) {
     const ni = q[qi], n = nodes[ni], nh = n.hops + 1;
     for (let m = 0; m < N; m++) {
       const mm = nodes[m];
       if (m === ni || !mm.alive || mm.hops <= nh) continue;
       if (dist2(n.x, n.y, mm.x, mm.y) > R2) continue;
-      mm.hops = nh; q.push(m);
+      mm.hops = nh; mm.connected = true; mm.lostAt = 0; q.push(m);
     }
   }
-  // parent = closest in-range neighbour exactly one hop nearer
+  assignParents();
+  routeDirty = false;
+}
+// parent = closest in-range connected neighbour exactly one hop nearer
+function assignParents() {
+  const N = nodes.length, R2 = P.range * P.range;
   for (let i = 0; i < N; i++) {
     const m = nodes[i];
-    if (!m.alive || m.isGateway || !isFinite(m.hops)) continue;
+    if (!m.alive || m.isGateway || !m.connected) continue;
     let best = -1, bd = Infinity;
     for (let j = 0; j < N; j++) {
       const n = nodes[j];
-      if (!n.alive || n.hops !== m.hops - 1) continue;
+      if (!n.alive || (!n.connected && !n.isGateway) || n.hops !== m.hops - 1) continue;
       const d = dist2(m.x, m.y, n.x, n.y);
       if (d <= R2 && d < bd) { bd = d; best = j; }
     }
-    m.parent = best;
+    if (best >= 0) m.parent = best;
   }
+}
+
+// Live routing maintenance, run a few times/second. Two responsibilities:
+//   (A) RECONNECT searching nodes — but only after each one's own regrow
+//       delay, and only to a neighbour that was already connected at the
+//       start of this tick. The delay + frontier-dependency make healing
+//       ripple outward from the live network over a few organic seconds.
+//   (B) MAINTAIN the live tree — BFS from gateways over connected nodes to
+//       refresh hops/parents (adopts new gateways, fixes drift) and demote
+//       any node that has lost all routes to a gateway into 'searching'.
+function maintainRouting(now) {
+  const N = nodes.length, R2 = P.range * P.range;
+  for (let i = 0; i < N; i++) { const n = nodes[i]; if (n.alive && n.isGateway) { n.connected = true; n.hops = 0; n.parent = -1; n.lostAt = 0; } }
+
+  // DETACH: if your actual uplink (parent) just died, you drop to
+  // searching and re-establish a link — even if an alternate exists. So
+  // every kill, especially a gateway, shows a visible spool-and-regrow
+  // beat in its neighbourhood rather than snapping silently to a backup.
+  for (let i = 0; i < N; i++) {
+    const m = nodes[i];
+    if (!m.alive || m.isGateway || !m.connected || m.parent < 0) continue;
+    const p = nodes[m.parent];
+    if (!p || !p.alive) {
+      m.connected = false; m.hops = Infinity; m.parent = -1;
+      m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax);
+    }
+  }
+
+  // (A) staggered reconnect (snapshot connectivity so at most one ring heals per tick)
+  const wasConnected = new Array(N);
+  for (let i = 0; i < N; i++) wasConnected[i] = nodes[i].connected;
+  for (let i = 0; i < N; i++) {
+    const m = nodes[i];
+    if (!m.alive || m.isGateway || m.connected) continue;
+    if (m.lostAt === 0) { m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax); }
+    if ((now - m.lostAt) < m.regrowDelay * 1000) continue;   // still regrowing
+    let best = -1, bd = Infinity, bh = Infinity;
+    for (let j = 0; j < N; j++) {
+      const n = nodes[j];
+      if (!n.alive || !wasConnected[j]) continue;
+      const d = dist2(m.x, m.y, n.x, n.y);
+      if (d > R2) continue;
+      if (n.hops < bh || (n.hops === bh && d < bd)) { bh = n.hops; bd = d; best = j; }
+    }
+    if (best >= 0) { m.parent = best; m.hops = nodes[best].hops + 1; m.connected = true; m.lostAt = 0; }
+  }
+
+  // (B) maintain the live tree + demote any node that lost gateway reach
+  const th = new Array(N).fill(Infinity), reach = new Array(N).fill(false), q = [];
+  for (let i = 0; i < N; i++) if (nodes[i].alive && nodes[i].isGateway) { th[i] = 0; reach[i] = true; q.push(i); }
+  for (let qi = 0; qi < q.length; qi++) {
+    const ni = q[qi], n = nodes[ni], nh = th[ni] + 1;
+    for (let m = 0; m < N; m++) {
+      const mm = nodes[m];
+      if (m === ni || !mm.alive || mm.isGateway || !mm.connected || th[m] <= nh) continue;
+      if (dist2(n.x, n.y, mm.x, mm.y) > R2) continue;
+      th[m] = nh; reach[m] = true; q.push(m);
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    const m = nodes[i];
+    if (!m.alive || m.isGateway || !m.connected) continue;
+    if (!reach[i]) {                       // connected but no longer reaches a gateway → signal lost
+      m.connected = false; m.hops = Infinity; m.parent = -1;
+      m.lostAt = now; m.regrowDelay = rand(P.regrowLossMin, P.regrowLossMax);
+    } else {
+      m.hops = th[i];
+    }
+  }
+  assignParents();
   routeDirty = false;
 }
 
@@ -392,6 +479,7 @@ function addGateway() {
 
 // ── traffic ───────────────────────────────────────────────────────
 function spawnPulse() {
+  if (pulses.length > 45) return;          // bound spool accumulation during outages
   // bias toward distant (high-hop) nodes for longer, more visible relays
   let pick = -1, pickHops = -1;
   for (let s = 0; s < 6; s++) {
@@ -409,14 +497,26 @@ function spawnPulse() {
 function stepPulses(dt) {
   for (let i = pulses.length - 1; i >= 0; i--) {
     const p = pulses[i];
+    // HELD: this reading is spooled at a node that lost its route. It waits
+    // here — exactly like the gateway-outage spool — until the node regains
+    // a path to a gateway (a re-route, or a new gateway coming online).
+    if (p.held) {
+      const h = nodes[p.holder];
+      if (!h || !h.alive) { pulses.splice(i, 1); continue; }
+      if (h.connected) {
+        const np = pathToGateway(p.holder);
+        if (np) { p.path = np; p.seg = 0; p.t = 0; p.held = false; }
+      }
+      continue;
+    }
     const a = p.path[p.seg];
     if (!nodes[a].alive) { pulses.splice(i, 1); continue; }
     let b = p.path[p.seg + 1];
-    // primary link may have switched (routing update / death) → re-home live
+    // primary link may have switched (routing update / death)
     if (b == null || !nodes[b].alive || nodes[a].parent !== b) {
-      const np = pathToGateway(a);
-      if (!np) { pulses.splice(i, 1); continue; }
-      p.path = np; p.seg = 0; p.t = 0; b = p.path[1];
+      const np = nodes[a].connected ? pathToGateway(a) : null;
+      if (np) { p.path = np; p.seg = 0; p.t = 0; b = p.path[1]; }
+      else { p.held = true; p.holder = a; continue; }   // no route → spool here
     }
     const A = nodes[a], B = nodes[b];
     const segLen = Math.hypot(B.x - A.x, B.y - A.y) || 1;
@@ -438,10 +538,13 @@ function pulseXY(p) {
   return [A.x + (B.x - A.x) * f, A.y + (B.y - A.y) * f];
 }
 
-// ── events: a node dies, children re-home ─────────────────────────
+// ── events: a node (or gateway) dies, children re-home ────────────
+// Kill a gateway and the region it served loses its route: pulses spool
+// at the nodes (held) and the network regrows toward another gateway —
+// or waits for a new one to come online.
 function killNode(i) {
-  if (nodes[i].isGateway) return;   // gateways are immune (hubs)
   nodes[i].alive = false;
+  nodes[i].connected = false;
   nodes[i].diedAt = performance.now();
   // retire tips sitting on the corpse
   for (let t = tips.length - 1; t >= 0; t--)
@@ -496,24 +599,44 @@ function render(now) {
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
     if (!n.alive) {
-      if (n.diedAt && now - n.diedAt < 1800) { // brief dying ember
-        const f = 1 - (now - n.diedAt) / 1800;
+      const age = now - n.diedAt;
+      if (n.diedAt && age >= 0 && age < 1800) { // brief dying ember
+        const f = 1 - age / 1800;
         ctx.fillStyle = `rgba(216,122,74,${0.5 * f})`;
         ctx.beginPath(); ctx.arc(n.x, n.y, 3.4 * f + 1, 0, 7); ctx.fill();
       }
       continue;
     }
     if (n.isGateway) { drawGateway(n, now); n.lit = Math.max(0, n.lit - 0.04); continue; }
-    const unhomed = !isFinite(n.hops);
+    if (!n.connected) {
+      // searching: a gentle seeking shimmer while it looks for a route
+      const seek = 0.10 + 0.10 * Math.abs(Math.sin(now / 600 + n.phase));
+      const r = 1.5 + 0.6 * Math.abs(Math.sin(now / 600 + n.phase));
+      ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${seek})`;
+      ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 7); ctx.fill();
+      continue;
+    }
     const breathe = 0.26 + 0.12 * Math.sin(now / 1400 + n.phase);
-    const a = unhomed ? 0.14 : Math.min(breathe + n.lit * 0.85, 1);
+    const a = Math.min(breathe + n.lit * 0.85, 1);
     const r = 1.6 + n.lit * 2.2;
     ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${a})`;
     ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 7); ctx.fill();
     n.lit = Math.max(0, n.lit - 0.035);
   }
-  // pulses
+  // pulses — traveling, or spooled (held) above the node holding them
+  const heldStack = {};
   for (const p of pulses) {
+    if (p.held) {
+      const h = nodes[p.holder];
+      if (!h || !h.alive) continue;
+      const k = (heldStack[p.holder] = (heldStack[p.holder] || 0) + 1);
+      const y = h.y - 7 - (k - 1) * 5 + Math.sin(now / 420 + k) * 1.3;
+      ctx.fillStyle = `rgba(236,186,96,0.92)`;            // amber = buffered
+      ctx.beginPath(); ctx.arc(h.x, y, 2.0, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(236,186,96,0.4)`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(h.x, y, 4.6, 0, 7); ctx.stroke();
+      continue;
+    }
     const [x, y] = pulseXY(p);
     ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},0.95)`;
     ctx.beginPath(); ctx.arc(x, y, 2.2, 0, 7); ctx.fill();
@@ -539,7 +662,7 @@ function frame(now) {
     lastGateway = now;
   }
   if (now - lastDeath > P.deathEverySec * 1000) { killRandomNode(); lastDeath = now; }
-  if (routeDirty || now - lastRoute > P.routeMs) { recomputeRouting(); lastRoute = now; }
+  if (routeDirty || now - lastRoute > P.routeMs) { maintainRouting(now); lastRoute = now; }
   if (now - lastPulse > 60000 / Math.max(P.pulsesPerMin * 6, 1)) { spawnPulse(); lastPulse = now; }
   stepPulses(dt);
   render(now);
@@ -561,7 +684,7 @@ function seed() {
   // first gateway sits right-of-center so hero copy (left) breathes
   const g = addNode(W * 0.62, H * 0.48, true);
   for (let i = 0; i < 5; i++) spawnTip(g, (i / 5) * Math.PI * 2 + rand(-0.2, 0.2));
-  recomputeRouting();
+  settleRoutingInstant();
 }
 
 // reduced motion: grow the whole organism invisibly, draw one still
@@ -574,7 +697,7 @@ function growStatic() {
     if (i % 280 === 0 && gatewayCount() < gatewayTarget()) addGateway();
   }
   while (gatewayCount() < gatewayTarget()) addGateway();
-  recomputeRouting();
+  settleRoutingInstant();
   ctx.clearRect(0, 0, W, H);
   drawLinks();
   for (const n of nodes) {
@@ -590,16 +713,16 @@ addEventListener("pointermove", e => {
   mouse.x = e.clientX; mouse.y = e.clientY;
   if (!staticMode) {
     const near = nearNode(mouse.x, mouse.y, 16);
-    canvas.style.cursor = (near >= 0 && !nodes[near].isGateway) ? "crosshair" : "default";
+    canvas.style.cursor = near >= 0 ? "crosshair" : "default";
   }
 });
-// Click a node to kill it and watch its children re-home to other
-// in-range neighbours — the reliability story as a toy. Gateways are
-// immune (they're the hubs everything routes toward).
+// Click any node OR gateway to kill it. Kill a node and its children
+// re-home; kill a gateway and the region it served spools its readings
+// and regrows toward another gateway — the reliability story as a toy.
 canvas.addEventListener("pointerdown", e => {
   if (staticMode) return;
   const hit = nearNode(e.clientX, e.clientY, 16);
-  if (hit >= 0 && nodes[hit].alive && !nodes[hit].isGateway) {
+  if (hit >= 0 && nodes[hit].alive) {
     killNode(hit);
     const h = document.getElementById("hint");
     if (h) { h.style.transition = "opacity .8s"; h.style.opacity = "0";
