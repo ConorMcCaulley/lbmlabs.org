@@ -173,9 +173,10 @@
 /* ════════════════════════════════════════════════════════════════
    The organism, as a Reticulum-style network. Layers:
 
-     1. GROWTH   — hyphal tips random-walk and sprinkle NODES across
-                   the field (organic placement; the cursor is a
-                   nutrient that growth leans toward).
+     1. GROWTH   — density-driven budding: any node whose surroundings
+                   aren't full buds a NODE nearby, biased away from the
+                   local centre of mass, so the colony spreads outward
+                   organically (the cursor is a nutrient it leans toward).
      2. GATEWAYS — appear over time (≈1 / 3s up to a density cap),
                    drawn as bright haloed hubs distinct from nodes.
      3. ROUTING  — the only lines DRAWN are primary radio links. Over
@@ -218,11 +219,9 @@ const P = {
   pulseSpeed: 165,     // px/sec a reading travels along its link
   cursorPull: 0.21,    // 0..1 nutrient attraction strength
   glow: 0.15,          // link brightness
-  nodeSpacing: 72,     // px walked between node drops
-  mergeRadius: 13,     // px: a tip this close to a node ends (no stacking)
-  turnNoise: 0.55,     // radians/step wobble
-  tipsMin: 9,
-  tipsMax: 18,
+  mergeRadius: 14,     // px: don't bud a node this close to an existing one
+  budRadius: 82,       // px: a node buds a new node within this radius of itself
+  budFullDensity: 6,   // neighbours within budRadius at which a node stops budding
   deathEverySec: 30,
   gatewayEverySec: 3,  // cadence of new gateway births
   maxGateways: 5,      // hard ceiling
@@ -243,9 +242,9 @@ const P = {
 // ── state ─────────────────────────────────────────────────────────
 let W = 0, H = 0, DPR = 1;
 let nodes = [];     // {x,y,alive,isGateway,connected,hops,parent,link,grow,lostAt,regrowDelay,lit,phase,...}
-let tips = [];      // {x,y,dir,dist} — node-placement growth
 let pulses = [];    // {path,seg,t,speed} traveling, or {held,holder} spooled at a node
 let retracting = []; // {pts,t0} — links fading out after a break/upgrade
+let budAccum = 0;   // fractional node-budding accumulator
 let mouse = { x: -1e4, y: -1e4 };
 let lastDeath = 0, lastPulse = 0, lastGateway = 0, lastRoute = 0;
 let routeDirty = true, running = true, staticMode = false;
@@ -293,7 +292,6 @@ function resize() {
   if (oldW > 0 && oldH > 0 && nodes.length && (W !== oldW || H !== oldH)) {
     const sx = W / oldW, sy = H / oldH;
     for (const n of nodes) { n.x *= sx; n.y *= sy; }
-    for (const t of tips) { t.x *= sx; t.y *= sy; }
     routeDirty = true; // range is in px → re-evaluate who can hear whom
   }
 }
@@ -495,55 +493,52 @@ function pathToGateway(start) {
   return path.length >= 2 ? path : null;
 }
 
-// ── growth ────────────────────────────────────────────────────────
-function spawnTip(idx, dir) {
-  const o = nodes[idx];
-  tips.push({ x: o.x, y: o.y, dir: dir ?? rand(0, Math.PI * 2), dist: 0 });
+// ── growth: density-driven budding ────────────────────────────────
+// No crawling tips. Any node whose surroundings aren't at full density
+// buds a new node within budRadius — biased AWAY from the local centre
+// of mass (into the open), so the colony spreads outward organically.
+// A new bud lands within radio range of its parent, then grows its link.
+function budOne() {
+  const budR2 = P.budRadius * P.budRadius;
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const i = Math.floor(Math.random() * nodes.length);
+    const n = nodes[i];
+    if (!n.alive) continue;
+    // local neighbours within budRadius + their centre of mass
+    let cnt = 0, cx = 0, cy = 0;
+    for (let j = 0; j < nodes.length; j++) {
+      if (j === i || !nodes[j].alive) continue;
+      if (dist2(n.x, n.y, nodes[j].x, nodes[j].y) <= budR2) { cnt++; cx += nodes[j].x; cy += nodes[j].y; }
+    }
+    if (cnt >= P.budFullDensity) continue;            // surroundings full → not eligible
+    // direction: away from the local centre of mass (into open space)
+    let dir;
+    if (cnt > 0 && dist2(n.x, n.y, cx / cnt, cy / cnt) > 4) dir = Math.atan2(n.y - cy / cnt, n.x - cx / cnt);
+    else dir = rand(0, Math.PI * 2);
+    dir += rand(-1, 1) * (0.3 + (P.branchPct / 70) * 1.5);  // 'branchiness' → angular spread
+    // cursor nutrient: lean toward the cursor when it's near
+    if (dist2(n.x, n.y, mouse.x, mouse.y) < 240 * 240) {
+      const want = Math.atan2(mouse.y - n.y, mouse.x - n.x);
+      let dd = want - dir; while (dd > Math.PI) dd -= 2 * Math.PI; while (dd < -Math.PI) dd += 2 * Math.PI;
+      dir += dd * P.cursorPull * 0.7;
+    }
+    const dist = P.budRadius * rand(0.55, 1.0);
+    const x = n.x + Math.cos(dir) * dist, y = n.y + Math.sin(dir) * dist;
+    if (x < 4 || x > W - 4 || y < 4 || y > H - 4) continue;  // keep on the field
+    if (nearNode(x, y, P.mergeRadius) >= 0) continue;        // don't stack on a neighbour
+    addNode(x, y, false);
+    return true;
+  }
+  return false;
 }
-function spawnTipFromRandom() {
-  const alive = [];
-  for (let i = 0; i < nodes.length; i++) if (nodes[i].alive) alive.push(i);
-  if (alive.length) spawnTip(alive[Math.floor(Math.random() * alive.length)]);
-}
-function stepTips(dt) {
-  const grown = aliveCount(false);
-  if (grown >= P.nodeCap) { if (tips.length > 2) tips.length = 2; }
-  else while (tips.length < P.tipsMin) spawnTipFromRandom();
-
-  const step = P.tipSpeed * dt;
-  for (let t = tips.length - 1; t >= 0; t--) {
-    const tip = tips[t];
-    // wobble + gentle nutrient pull toward the cursor
-    tip.dir += rand(-P.turnNoise, P.turnNoise) * dt * 6;
-    const dm2 = dist2(tip.x, tip.y, mouse.x, mouse.y);
-    if (dm2 < 250 * 250) {
-      const want = Math.atan2(mouse.y - tip.y, mouse.x - tip.x);
-      let d = want - tip.dir;
-      while (d > Math.PI) d -= 2 * Math.PI;
-      while (d < -Math.PI) d += 2 * Math.PI;
-      tip.dir += d * P.cursorPull * dt * 2.2;
-    }
-    tip.x += Math.cos(tip.dir) * step;
-    tip.y += Math.sin(tip.dir) * step;
-    tip.dist += step;
-
-    // leave the field → drop a frontier node and retire the tip
-    if (tip.x < -20 || tip.x > W + 20 || tip.y < -20 || tip.y > H + 20) {
-      if (grown < P.nodeCap) addNode(clamp(tip.x, 2, W - 2), clamp(tip.y, 2, H - 2), false);
-      tips.splice(t, 1); continue;
-    }
-    // ran into an existing node → end here (avoid stacking; routing meshes them)
-    if (tip.dist > P.nodeSpacing * 0.5 && nearNode(tip.x, tip.y, P.mergeRadius) >= 0) {
-      tips.splice(t, 1); continue;
-    }
-    // drop a waypoint node; maybe branch; rare natural tip death
-    if (tip.dist >= P.nodeSpacing * rand(0.8, 1.25) && grown < P.nodeCap) {
-      const n = addNode(tip.x, tip.y, false);
-      tip.dist = 0;
-      if (Math.random() * 100 < P.branchPct && tips.length < P.tipsMax)
-        spawnTip(n, tip.dir + rand(0.5, 1.2) * (Math.random() < 0.5 ? -1 : 1));
-      if (Math.random() < 0.06) tips.splice(t, 1);
-    }
+function budStep(dt) {
+  let grown = aliveCount(false);
+  if (grown >= P.nodeCap) { budAccum = 0; return; }
+  budAccum += dt * Math.max(P.tipSpeed * 0.25, 0.4);  // 'growth speed' → buds/sec
+  let made = 0;
+  while (budAccum >= 1 && grown < P.nodeCap && made < 6) {
+    budAccum -= 1;
+    if (budOne()) { grown++; made++; }
   }
 }
 
@@ -635,10 +630,6 @@ function killNode(i) {
   nodes[i].alive = false;
   nodes[i].connected = false;
   nodes[i].diedAt = performance.now();
-  // retire tips sitting on the corpse
-  for (let t = tips.length - 1; t >= 0; t--)
-    if (dist2(tips[t].x, tips[t].y, nodes[i].x, nodes[i].y) < P.mergeRadius * P.mergeRadius)
-      tips.splice(t, 1);
   routeDirty = true;                // re-route: orphaned children find new parents
 }
 function killRandomNode() {
@@ -749,9 +740,7 @@ function render(now) {
     ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},0.18)`;
     ctx.beginPath(); ctx.arc(x, y, 6.5, 0, 7); ctx.fill();
   }
-  // node-placement tips + growing-link frontiers: the bright reaching points
-  ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},0.6)`;
-  for (const t of tips) { ctx.beginPath(); ctx.arc(t.x, t.y, 1.1, 0, 7); ctx.fill(); }
+  // growing-link frontiers: the bright reaching points of crawling strands
   ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},0.85)`;
   for (const n of nodes) { if (n.alive && n.grow) { ctx.beginPath(); ctx.arc(n.grow.tx, n.grow.ty, 1.3, 0, 7); ctx.fill(); } }
   ctx.globalCompositeOperation = "source-over";
@@ -764,7 +753,7 @@ function frame(now) {
   const dt = Math.min((now - prev) / 1000, 0.05); // clamp: tab-return spikes
   prev = now;
 
-  stepTips(dt);
+  budStep(dt);
   if (now - lastGateway > P.gatewayEverySec * 1000) {
     if (gatewayCount() < gatewayTarget()) addGateway();
     lastGateway = now;
@@ -788,12 +777,11 @@ function frame(now) {
 }
 
 function seed() {
-  nodes = []; tips = []; pulses = []; retracting = []; routeDirty = true;
+  nodes = []; pulses = []; retracting = []; routeDirty = true; budAccum = 0;
   lastGateway = performance.now();           // stagger the first new gateway
   // first gateway sits right-of-center so hero copy (left) breathes; the
-  // network grows out and wires itself up organically from here (no settle)
-  const g = addNode(W * 0.62, H * 0.48, true);
-  for (let i = 0; i < 5; i++) spawnTip(g, (i / 5) * Math.PI * 2 + rand(-0.2, 0.2));
+  // colony buds outward and wires itself up organically from here
+  addNode(W * 0.62, H * 0.48, true);
 }
 
 // reduced motion: grow the whole organism invisibly, draw one still
@@ -801,9 +789,9 @@ function growStatic() {
   running = false; staticMode = true;
   document.getElementById("rmNote").hidden = false;
   seed();
-  for (let i = 0; i < 5000 && aliveCount(false) < P.nodeCap; i++) {
-    stepTips(1 / 30);
-    if (i % 280 === 0 && gatewayCount() < gatewayTarget()) addGateway();
+  for (let i = 0; i < 9000 && aliveCount(false) < P.nodeCap; i++) {
+    budOne();
+    if (i % 200 === 0 && gatewayCount() < gatewayTarget()) addGateway();
   }
   while (gatewayCount() < gatewayTarget()) addGateway();
   settleRoutingInstant();
