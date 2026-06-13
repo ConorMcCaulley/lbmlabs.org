@@ -10,6 +10,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const repo = "#";          // A7
 const bom = "#";           // bom.md deep link
 const guide = `${base}/build/bench-leaf`;  // the rendered bench-leaf guide
+const gatewayGuide = `${base}/build/gateway`;  // the rendered gateway guide
 const arch = "#";          // hardware-architecture deep link
 const issues = "#";        // repo issues
 const tiers = [
@@ -26,14 +27,14 @@ const tiers = [
     rule: "One rule before you start: never power the radio without its antenna attached. (The guide repeats this. It means it.)",
   },
   {
-    n: "Tier 2", title: "The node pair", cost: "add a gateway · ~$80 more",
-    photo: "the deployed pair — two boxes talking across the room",
-    body: "A leaf alone is a sensor; a pair is a network. The second box is a gateway — another Pi and radio (~$80 in parts) that listens for sealed readings over LoRa and forwards them to their destination over WiFi. This is the exact architecture of a real deployment, running on your bench: kill the gateway's power mid-batch and watch the leaf buffer, retry, and deliver everything when it returns.",
-    aside: "The failure drills in the repo script that sabotage for you.",
+    n: "Tier 2", title: "The gateway", cost: "a Pi you supply + a ~$25 radio",
+    photo: "the gateway box — a Pi and a LoRa radio bridging the mesh to WiFi",
+    body: "A leaf alone is a sensor; a gateway makes it a network. The gateway is a Pi you supply — a Pi 4 is the tested target, a spare Pi Zero 2 W works too — plus the same $25 LoRa radio as the leaf. It listens for sealed readings over LoRa, forwards them to your destination over WiFi (behind a host-allowlist and a per-sensor rate limit), and announces itself so leaves can find it. Pair it with your bench leaf and watch a reading travel the whole path.",
+    aside: "Kill the gateway's power mid-batch and the leaf buffers to disk, then drains everything when it returns — the failure drills in the repo run that sabotage for you.",
     rows: [
-      ["Parts", "the Tier 1 leaf + a gateway", bom],
-      ["Guide", "gateway setup + pairing", repo],
-      ["You'll have", "sense → mesh → deliver, in two boxes", null],
+      ["Parts", "a Pi + the LoRa radio", gatewayGuide],
+      ["Guide", "build + pair the gateway", gatewayGuide],
+      ["You'll have", "a working network: sense → mesh → deliver", null],
     ],
     rule: null,
   },

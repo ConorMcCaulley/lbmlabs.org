@@ -1,0 +1,147 @@
+---
+import Base from "../../layouts/Base.astro";
+import SiteNav from "../../components/SiteNav.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
+/* Build guide — the gateway (Tier 2). From gateway/setup.sh + config.toml
+   + the leaf's announce/identity-hash pairing. Voice It/I; bench, not
+   field. Repo links land at A7. */
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const repo = "#"; // A7
+const parts = [
+  ["Raspberry Pi 4 (2 GB+) — or a spare Pi you already have", "~$45", "the gateway's computer; operator-supplied"],
+  ["32 GB high-endurance microSD + USB-C 5 V/3 A supply", "~$22", "Pi OS Lite 64-bit"],
+  ["LILYGO TTGO LoRa32 v2.1 + 915 MHz antenna", "$25", "the radio — same as the leaf; never power without the antenna"],
+  ["SMA male → SMA female bulkhead cable (RG316, ~20 cm)", "$8", "panel-mounts the antenna"],
+  ["Plastic project box", "on hand", "it all goes in here"],
+];
+const topology = `WiFi / Ethernet ──► the internet  (your destination)
+
+Pi 4 [USB-A] ── TTGO LoRa32 → /dev/rnode ── 915 MHz antenna (bulkhead)`;
+const steps = [
+  { h: "Set up the Pi", b: "Flash Pi OS Lite 64-bit, clone the repo, and run <code>gateway/setup.sh</code>. It installs the Python venv (RNS + requests), a udev rule that pins the TTGO as <code>/dev/rnode</code>, the app at <code>/opt/mycelium-network-gateway/</code>, and the policy config at <code>/etc/mycelium-network-gateway/config.toml</code>, then enables (but doesn't start) the <code>rnsd</code> and <code>egress-gateway</code> services. It's idempotent — safe to re-run if anything drifts." },
+  { h: "Flash + plug the radio", b: "Flash a TTGO with RNode firmware (laptop-side), plug it into the Pi, and verify it appears: <code>ls -la /dev/rnode</code>. Antenna on first — always." },
+  { h: "Point it at your destination", b: "Edit <code>/etc/mycelium-network-gateway/config.toml</code>: the <code>allowed_hosts</code> the gateway may forward to (e.g. <code>script.google.com</code> for a Google Sheet via Apps Script), the per-identity <code>max_requests_per_window</code> rate limit, and <code>announce_interval</code>. The file is re-read live — no restart, no dropped requests." },
+  { h: "Start it", b: "<code>sudo systemctl start rnsd egress-gateway</code>, then <code>journalctl -u egress-gateway -f</code>. The gateway announces itself on the network and waits — and prints its <strong>identity hash</strong>, which you'll need next." },
+  { h: "Pair the leaf", b: "Copy the gateway's identity hash from the journal into the leaf's config (<code>gateway_identity_hash</code>). That's the pairing: the leaf hears the gateway's announce, its LED goes from the slow-blink <em>discovering</em> to a steady link, and it starts delivering. A <code>temp_c</code> row lands in your Sheet." },
+];
+---
+<Base title="Build guide — the gateway" description="Step-by-step: build and pair a Mycelium gateway. A Pi you supply plus a LoRa radio that carries sealed readings from the mesh to a destination you own.">
+  <SiteNav current="build" />
+
+  <article class="guide" id="main">
+    <div class="wrap narrow">
+      <p class="crumb mono"><a href={`${base}/build`}>← Build</a> · guide</p>
+      <h1>The gateway</h1>
+      <p class="meta mono">a Pi you supply + a ~$25 radio · pairs with your leaf</p>
+      <p class="lede">A leaf alone is a sensor; a gateway makes it a network. The
+      gateway is a Pi you supply, plus the same LoRa radio as the leaf. It listens
+      for sealed readings over LoRa and forwards them to your destination over
+      WiFi — behind a host allowlist and a per-sensor rate limit — and announces
+      itself so leaves can find it. This guide builds one and pairs it with the
+      bench leaf, on your bench.</p>
+
+      <h2>Parts</h2>
+      <table class="parts mono">
+        <tbody>
+          {parts.map(([p, c, n]) => (
+            <tr><td>{p}</td><td class="cost">{c}</td><td class="note">{n}</td></tr>
+          ))}
+          <tr class="total"><td>Total</td><td class="cost">~$100</td><td class="note">…or ~$33 + a spare Pi</td></tr>
+        </tbody>
+      </table>
+      <p class="dim small">The gateway runs on commodity Pi hardware you source
+      yourself — a Pi 4 is the tested target, a Pi Zero 2 W works too. It has no
+      sensor; it's a Pi, a radio, and WiFi.</p>
+
+      <h2>Wiring</h2>
+      <p>Simpler than the leaf — a Pi 4 has full-size USB and WiFi built in:</p>
+      <pre class="evidence mono">{topology}</pre>
+      <p class="callout mono">⚠ Never power the radio without its antenna attached
+      — transmitting into nothing can kill the TTGO.</p>
+
+      <h2>Build + pair</h2>
+      <ol class="steps">
+        {steps.map((s) => (
+          <li>
+            <h3>{s.h}</h3>
+            <p set:html={s.b}></p>
+          </li>
+        ))}
+      </ol>
+
+      <div class="prove">
+        <h3>Prove the pair works</h3>
+        <p>Watch a reading travel the whole path — leaf seals it, the radio carries
+        it, the gateway forwards it, a row appears in your Sheet. Then the real
+        test: <strong>pull the gateway's power mid-batch.</strong> The leaf keeps
+        sampling and buffers to disk; restore power and everything drains, in
+        order, nothing lost. That's the gateway-outage drill — and there's a
+        script in the repo that runs it for you.</p>
+      </div>
+
+      <h2>Troubleshooting</h2>
+      <ul class="trouble">
+        <li><strong>Leaf stuck slow-blinking <em>discovering</em>:</strong> the <code>gateway_identity_hash</code> is wrong or empty, the gateway isn't announcing (check <code>journalctl -u egress-gateway</code>), or the two are out of radio range.</li>
+        <li><strong>Gateway receives but won't forward:</strong> the destination host isn't in <code>allowed_hosts</code>, the sensor hit its rate limit, or the request exceeds <code>max_request_bytes</code>. The journal says which.</li>
+        <li><strong>No <code>/dev/rnode</code>:</strong> run <code>lsusb</code> — if the TTGO's chip isn't <code>1a86:55d4</code>, adjust the udev rule in <code>gateway/setup.sh</code>.</li>
+      </ul>
+
+      <h2>What this proves — and what it doesn't</h2>
+      <p><strong>Proves:</strong> the full delivery path leaf → gateway → your
+      destination, the gateway's security policy (host allowlist, per-identity
+      rate limit, size cap), auto-discovery by announce, and the outage
+      buffer-and-drain — all on the bench.</p>
+      <p class="dim"><strong>Doesn't prove:</strong> multi-hop relay across several
+      nodes, real-world radio range, or power — those come with more nodes and the
+      field build, once they've survived real weather.</p>
+
+      <div class="ctas">
+        <a class="btn-primary" href={`${base}/build`}>← Back to Build</a>
+        <a class="btn-ghost" href={`${base}/build/bench-leaf`}>The bench leaf guide →</a>
+      </div>
+    </div>
+  </article>
+
+  <SiteFooter />
+</Base>
+
+<style>
+  .guide { padding: var(--s-8) 8vw var(--s-7); }
+  .crumb { margin-bottom: var(--s-5); }
+  .crumb a { color: var(--accent); }
+  .guide h1 { margin-bottom: var(--s-2); }
+  .meta { color: var(--dim); margin-bottom: var(--s-5); }
+  .lede { font-size: clamp(1.05rem, 1.5vw, 1.2rem); color: var(--dim); max-width: 62ch; }
+  .guide h2 { margin-top: var(--s-7); font-size: var(--t-h3); }
+  .guide p { max-width: 64ch; line-height: 1.7; }
+  .guide code { font-family: var(--font-mono); font-size: 0.86em; color: var(--accent);
+    background: var(--bg-raise); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+  .parts { width: 100%; border-collapse: collapse; margin-top: var(--s-4); font-size: var(--t-small); }
+  .parts td { border-bottom: 1px solid var(--line); padding: var(--s-3) var(--s-3) var(--s-3) 0; vertical-align: top; }
+  .parts .cost { color: var(--accent); white-space: nowrap; text-align: right; width: 4.5rem; }
+  .parts .note { color: var(--dim); }
+  .parts .total td { border-bottom: none; border-top: 1px solid var(--rule); color: var(--ink); padding-top: var(--s-3); }
+
+  .guide .evidence { white-space: pre; }
+  .callout { margin: var(--s-5) 0; padding: var(--s-3) var(--s-4); font-size: var(--t-small);
+    color: var(--amber); border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+    border-radius: var(--r-md); background: color-mix(in srgb, var(--amber) 7%, transparent); max-width: 64ch; }
+
+  .steps { list-style: none; counter-reset: step; padding: 0; margin: var(--s-4) 0; }
+  .steps li { position: relative; padding: 0 0 var(--s-5) var(--s-7); border-left: 1px solid var(--line); margin-left: 12px; }
+  .steps li::before { counter-increment: step; content: counter(step); position: absolute; left: -13px; top: 0;
+    width: 26px; height: 26px; border-radius: var(--r-pill); background: var(--bg-raise);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent);
+    font: 600 13px/26px var(--font-mono); text-align: center; }
+  .steps h3 { margin: 0 0 var(--s-2); font-size: 1.1rem; }
+  .steps li:last-child { border-left-color: transparent; }
+
+  .prove { margin: var(--s-6) 0; padding: var(--s-5); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: var(--r-md); background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .prove h3 { margin: 0 0 var(--s-2); color: var(--accent); }
+
+  .trouble { padding-left: var(--s-5); }
+  .trouble li { margin-bottom: var(--s-3); line-height: 1.6; max-width: 64ch; }
+  .ctas { margin-top: var(--s-7); }
+</style>
