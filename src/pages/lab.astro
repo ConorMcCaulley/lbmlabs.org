@@ -1,0 +1,56 @@
+---
+import Base from "../layouts/Base.astro";
+import SiteNav from "../components/SiteNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+/* /lab (B5). LBM Labs in five sentences — deliberately the shortest page;
+   brevity is the brand statement. Locked copy-lab.md with the June 2026
+   brand change (no "nothing for sale"; "at cost" / "no markup"). */
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const repo = "#"; // A7
+---
+<Base title="LBM Labs — open public-good infrastructure" description="LBM Labs builds open, public-good infrastructure for understanding the natural world, and gives the designs away. Flagship: the Mycelium telemetry mesh.">
+  <SiteNav current="lab" />
+
+  <main class="lab" id="main">
+    <div class="wrap narrow">
+      <p class="kicker">Lab.</p>
+      <h1>LBM&nbsp;Labs</h1>
+      <p class="statement">LBM Labs builds open, public-good infrastructure for
+      understanding the natural world — and gives the designs away. There's no
+      markup and no subscription: the design is free, and any hardware we offer
+      is sold at cost, because tools for protecting the commons should belong to
+      it. Everything we produce is published complete: hardware designs,
+      firmware, software, documentation, and the roadmap, under licenses that let
+      you use it, change it, and build on it (Apache-2.0 for code, CC BY 4.0 for
+      docs and hardware). Our flagship project is <strong>Mycelium</strong>, a
+      free, open, encrypted environmental telemetry mesh — the best way to
+      understand the lab is to <a href={`${base}/why`}>read why we built it</a>
+      or just <a href={`${base}/build`}>build a node</a>. More projects will
+      appear here as they earn the space.</p>
+
+      <h2>How to follow or help</h2>
+      <ul class="contact">
+        <li><span class="ck mono">GitHub</span> <a href={repo}>the repo&nbsp;↗</a> — the work happens in the open; watch it, file issues, send patches.</li>
+        <li><span class="ck mono">Email</span> <a href="mailto:hello@lbmlabs.org">hello@lbmlabs.org</a> — for everything else.</li>
+      </ul>
+      <p class="aside dim small">No newsletter, no socials to follow, no analytics
+      on this site. If the work is good, the repo history will say so.</p>
+    </div>
+  </main>
+
+  <SiteFooter />
+</Base>
+
+<style>
+  .lab { padding: var(--s-9) 8vw var(--s-8); min-height: 60vh; }
+  .lab h1 { font-size: clamp(2.6rem, 7vw, 4.6rem); margin-bottom: var(--s-5); }
+  .statement { font-size: clamp(1.1rem, 1.7vw, 1.35rem); line-height: 1.7; max-width: 60ch; color: var(--ink); }
+  .statement strong { color: var(--accent); }
+  .statement a { color: var(--accent); }
+  .lab h2 { margin-top: var(--s-7); font-size: var(--t-h3); }
+  .contact { list-style: none; padding: 0; margin: var(--s-4) 0; display: grid; gap: var(--s-3); }
+  .contact li { color: var(--dim); }
+  .contact .ck { display: inline-block; min-width: 5rem; color: var(--accent); font-size: var(--t-small); }
+  .contact a { color: var(--ink); }
+  .aside { margin-top: var(--s-5); max-width: 56ch; }
+</style>
