@@ -31,9 +31,9 @@ GPIO 17 ── 330 Ω ── LED ── GND       (breadboard)
 Mayfly AA0/AA1 Grove socket ── Grove cable ── Grove temp sensor`;
 const steps = [
   { h: "Flash the Mayfly", b: "In the Arduino IDE, add the board package <em>EnviroDIY ATmega Boards</em> → <em>EnviroDIY Mayfly 1284P</em> and the <em>Adafruit ADS1X15</em> library. Open the Grove-temp sketch, read its PORT CONFIG header, and upload. With the Grove sensor in the <strong>AA0/AA1 aux-analog socket</strong> (Grove power jumper at 3.3 V), the Serial Monitor at 115200 should show a <code>$MYC,…</code> line every 10 s and the green LED blinking per line — <code>temp_c</code> near your thermostat's opinion." },
-  { h: "Set up the Pi", b: "Flash Pi OS Lite 64-bit, clone the repo, run <code>leaf/setup.sh</code>, and do the key + <code>config.toml</code> steps it prints — including <code>sensor = \"mayfly\"</code> in <code>/etc/mycelium-network-leaf/config.toml</code>. Reboot." },
+  { h: "Set up the Pi", b: "Flash Pi OS Lite 64-bit, clone the repo, run <code>leaf/setup.sh</code>, and do the key + <code>config.toml</code> steps it prints — including <code>sensor = \"mayfly\"</code> in <code>/etc/mycelium-network-leaf/config.toml</code>. Leave <code>gateway_identity_hash</code> blank for now; you'll set it when you build and pair a gateway. Reboot." },
   { h: "Plug the chain together", b: "Wire it per the topology above, then verify both serial devices appear: <code>ls -la /dev/rnode /dev/mayfly</code>. (udev pins each by chip, so hub port order never matters.)" },
-  { h: "Start and watch", b: "<code>sudo systemctl start rnsd leaf-node</code>, then <code>journalctl -u leaf-node -f</code>. You should see gateway discovery, then <code>sampled: temp_c=21.340 (queue depth 1)</code>, then <code>delivered 1 reading(s)…</code> — and a <code>temp_c</code> row in your Sheet." },
+  { h: "Start and watch", b: "<code>sudo systemctl start rnsd leaf-node</code>, then <code>journalctl -u leaf-node -f</code>. With no gateway yet, you should see the leaf sampling real readings and queuing them — <code>sampled: temp_c=21.340 (queue depth 1)</code>, the depth climbing — and the LED slow-blinking <em>discovering</em> as it listens for a gateway to announce. That's the leaf working on its own." },
 ];
 ---
 <Base title="Build guide — the bench leaf" description="Step-by-step: build a Mycelium bench leaf from off-the-shelf parts in an afternoon. A $7 thermometer to an encrypted reading in your own spreadsheet.">
@@ -44,12 +44,14 @@ const steps = [
       <p class="crumb mono"><a href={`${base}/build`}>← Build</a> · guide</p>
       <h1>The bench leaf</h1>
       <p class="meta mono">~$176 · an afternoon · no soldering</p>
-      <p class="lede">The smallest build that exercises the entire real pipeline:
-      a Grove thermistor → a Mayfly logger → your Pi (which seals each reading
-      with AES-256-GCM) → the LoRa radio → your gateway → a spreadsheet you own,
-      with a status LED blinking through it all. USB wall power, no solar, no
-      enclosure. Its job is to teach you the whole system on the bench before any
-      expensive sonde is on the line.</p>
+      <p class="lede">This builds the sensor node itself — the leaf: a Grove
+      thermistor → a Mayfly logger → your Pi, which seals each reading with
+      AES-256-GCM and hands it to the LoRa radio, queued for delivery, with a
+      status LED blinking through it all. USB wall power, no solar, no enclosure.
+      A leaf on its own senses, seals, and queues; it starts delivering to a
+      spreadsheet you own the moment you <a href={`${base}/build/gateway`}>add a
+      gateway</a> — so this guide gets the leaf working and proving itself, no
+      gateway required.</p>
 
       <h2>Parts</h2>
       <table class="parts mono">
@@ -84,9 +86,10 @@ const steps = [
 
       <div class="prove">
         <h3>Prove it's real</h3>
-        <p>Pinch the thermistor between two fingers for a minute. The next samples
-        should climb a few degrees. That wiggle in your spreadsheet is the whole
-        pipeline, end to end, measuring an actual thing.</p>
+        <p>Pinch the thermistor between two fingers for a minute. In the journal,
+        the sampled <code>temp_c</code> should climb a few degrees — the whole
+        sense-and-seal path, measuring an actual thing. Those queued readings
+        start landing in a spreadsheet you own the moment you add a gateway.</p>
       </div>
 
       <h2>Troubleshooting</h2>
@@ -106,8 +109,8 @@ const steps = [
       with the field build and the sonde, once they've survived real weather.</p>
 
       <div class="ctas">
-        <a class="btn-primary" href={`${base}/build`}>← Back to Build</a>
-        <a class="btn-ghost" href={repo}>Read the code</a>
+        <a class="btn-primary" href={`${base}/build/gateway`}>Next: add a gateway →</a>
+        <a class="btn-ghost" href={`${base}/build`}>← Back to Build</a>
       </div>
     </div>
   </article>
