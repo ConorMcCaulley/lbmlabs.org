@@ -627,13 +627,24 @@ function spawnPulseFrom(i) {
   n.lit = 1;
   if (litMode === "stay") n.glowOn = true; // reading source stays lit (in 'stay' mode)
 }
-// Synchronized read: on each cycle every node rolls 1/3 to release a
-// reading at the same moment, so they travel to the gateways in a wave.
+// A node with no route still takes its reading and HOLDS it (spools),
+// waiting for a gateway to come back — realistic store-and-forward.
+function spoolAt(i) {
+  if (pulses.length > 300) return;
+  const n = nodes[i];
+  pulses.push({ held: true, holder: i, path: null, seg: 0, t: 0, speed: P.pulseSpeed * rand(0.9, 1.1) });
+  n.lit = 1;
+  if (litMode === "stay") n.glowOn = true;
+}
+// Synchronized read: on each cycle every node rolls 1/3 to take a reading
+// at the same moment. A connected node sends it toward its gateway; a node
+// with no route still reads and holds it, spooled, until a gateway returns.
 function readBurst() {
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
-    if (n.alive && !n.isGateway && n.connected && isFinite(n.hops) && n.hops >= 1
-        && Math.random() < P.readChance) spawnPulseFrom(i);
+    if (!n.alive || n.isGateway || Math.random() >= P.readChance) continue;
+    if (n.connected && isFinite(n.hops) && n.hops >= 1) spawnPulseFrom(i);
+    else spoolAt(i);
   }
 }
 function stepPulses(dt) {
@@ -762,11 +773,14 @@ function render(now) {
     }
     if (n.isGateway) { drawGateway(n, now); n.lit = Math.max(0, n.lit - 0.04); continue; }
     if (!n.connected) {
-      // searching: a gentle seeking shimmer while it looks for a route
+      // searching: a gentle seeking shimmer — plus a brief flash when it
+      // takes a reading it has to hold (spool) for lack of a gateway
       const seek = 0.10 + 0.10 * Math.abs(Math.sin(now / 600 + n.phase));
-      const r = 1.5 + 0.6 * Math.abs(Math.sin(now / 600 + n.phase));
-      ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${seek})`;
+      const a = Math.min(seek + n.lit * 0.8, 1);
+      const r = 1.5 + 0.6 * Math.abs(Math.sin(now / 600 + n.phase)) + n.lit * 2;
+      ctx.fillStyle = `rgba(${ACCENT.r},${ACCENT.g},${ACCENT.b},${a})`;
       ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 7); ctx.fill();
+      n.lit = Math.max(0, n.lit - 0.035);
       continue;
     }
     const breathe = 0.26 + 0.12 * Math.sin(now / 1400 + n.phase);
