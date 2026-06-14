@@ -4,19 +4,20 @@
    travelling pulse pauses under reduced-motion. */
 ---
 <figure class="d4" role="img" aria-label="A reading is sealed at the sensor node, relayed across the mesh, and delivered to a spreadsheet the owner controls.">
-  <svg viewBox="0 0 760 150" class="d4-svg" aria-hidden="true">
+  <svg viewBox="0 0 760 60" class="d4-svg" aria-hidden="true">
+    <!-- nodes sit on 5 equal columns (centers 76/228/380/532/684) so each lands above its label -->
     <!-- connecting line -->
-    <line x1="70" y1="60" x2="690" y2="60" class="wire" />
+    <line x1="76" y1="34" x2="684" y2="34" class="wire" />
     <!-- mesh relay hops (dashed = the mesh middle) -->
-    <line x1="250" y1="60" x2="510" y2="60" class="wire dash" />
+    <line x1="228" y1="34" x2="532" y2="34" class="wire dash" />
     <!-- stages -->
-    <g class="stage"><circle cx="70"  cy="60" r="9" class="sense" /></g>
-    <g class="stage"><circle cx="250" cy="60" r="8" class="node" /></g>
-    <g class="stage"><circle cx="380" cy="60" r="6" class="node" /></g>
-    <g class="stage"><circle cx="510" cy="60" r="8" class="node" /></g>
-    <g class="stage"><circle cx="690" cy="60" r="11" class="gw" /><circle cx="690" cy="60" r="4" class="gwcore" /></g>
+    <g class="stage"><circle cx="76"  cy="34" r="9" class="sense" /></g>
+    <g class="stage"><circle cx="228" cy="34" r="8" class="node" /></g>
+    <g class="stage"><circle cx="380" cy="34" r="6" class="node" /></g>
+    <g class="stage"><circle cx="532" cy="34" r="8" class="node" /></g>
+    <g class="stage"><circle cx="684" cy="34" r="11" class="gw" /><circle cx="684" cy="34" r="4" class="gwcore" /></g>
     <!-- travelling reading -->
-    <circle cx="0" cy="60" r="3.5" class="pulse" />
+    <circle cx="0" cy="34" r="3.5" class="pulse" />
   </svg>
   <div class="d4-labels">
     <span>sensor</span><span>seal</span><span>relay · mesh</span><span>gateway</span><span>your&nbsp;sheet</span>
@@ -35,19 +36,17 @@
   .gwcore{ fill: var(--accent-hot); }
   .pulse { fill: var(--accent-hot); animation: d4flow 4s linear infinite; }
   @keyframes d4flow {
-    0%   { transform: translateX(70px);  opacity: 0; }
+    0%   { transform: translateX(76px);  opacity: 0; }
     8%   { opacity: 1; }
     92%  { opacity: 1; }
-    100% { transform: translateX(690px); opacity: 0; }
+    100% { transform: translateX(684px); opacity: 0; }
   }
   .d4-labels {
     display: grid; grid-template-columns: repeat(5, 1fr);
     font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);
-    margin-top: var(--s-2);
+    margin-top: 6px;
   }
-  .d4-labels span:nth-child(1) { text-align: left; }
-  .d4-labels span:nth-child(5) { text-align: right; }
-  .d4-labels span:not(:first-child):not(:last-child) { text-align: center; }
+  .d4-labels span { text-align: center; }
   .d4-mono { color: var(--accent); margin-top: var(--s-4); font-size: var(--t-mono); }
   [data-theme="paper"] .d4-mono { color: var(--accent-deep); }
   @media (prefers-reduced-motion: reduce) { .pulse { animation: none; transform: translateX(380px); } }

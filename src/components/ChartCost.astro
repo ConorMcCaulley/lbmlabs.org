@@ -15,14 +15,18 @@ const bw = Math.min(slot * 0.5, 46);
 const bars = Array.from({ length: YEARS + 1 }, (_, yr) => {
   const cx = LEFT + slot * (yr + 0.5);
   const sub = SUB * yr;
+  const hwY = y(HW);
+  const subY = y(HW + sub);
   return {
     yr, cx,
-    hwY: y(HW), hwH: BASE - y(HW),
-    subY: y(HW + sub), subH: y(HW) - y(HW + sub),
+    hwY, hwH: BASE - hwY,
+    subY, subH: hwY - subY,
+    topY: sub > 0 ? subY : hwY,   // top of the stacked bar, for the value label
     total: HW + sub,
   };
 });
 const nodeY = y(NODE);
+const fmt = (n) => "$" + n.toLocaleString("en-US");   // $1,159 etc.
 ---
 <figure class="d6" role="img" aria-label={`Chart: a commercial station costs about $${HW} in hardware plus about $${SUB} every year, stacking to roughly $${maxV} by year ${YEARS}, while a Mycelium node is about $${NODE} once.`}>
   <svg viewBox="0 0 760 290" class="d6-svg" aria-hidden="true">
@@ -36,17 +40,20 @@ const nodeY = y(NODE);
         <text x={b.cx} y={BASE + 18} class="xlab">yr {b.yr}</text>
       </g>
     ))}
+    <!-- running total above each bar (not animated, so it doesn't squash) -->
+    {bars.map((b) => (
+      <text x={b.cx} y={b.topY - 8} class={`barlab ${b.yr === 0 || b.yr === YEARS ? "key" : ""}`}>{fmt(b.total)}</text>
+    ))}
     <!-- Mycelium flat reference -->
     <line x1={LEFT} y1={nodeY} x2={RIGHT} y2={nodeY} class="nodeline" />
-    <text x={RIGHT} y={nodeY - 7} class="nodelab">Mycelium node · ~${NODE} · once</text>
-    <text x={bars[YEARS].cx} y={y(maxV) - 8} class="toplab">~${maxV}</text>
+    <text x={RIGHT} y={nodeY - 7} class="nodelab">Mycelium node · {fmt(NODE)} · once</text>
   </svg>
   <div class="d6-key mono">
     <span><i class="sw hw"></i>hardware</span>
     <span><i class="sw sub"></i>subscription, stacking</span>
     <span><i class="sw node"></i>a Mycelium node, once</span>
   </div>
-  <figcaption class="d6-cap mono">a commercial station's subscription keeps stacking, year after year. A Mycelium node is its parts, once. <span class="dim">(prices as listed June 2026)</span></figcaption>
+  <figcaption class="d6-cap mono">a commercial station runs ~{fmt(HW)} up front, then ~{fmt(SUB)} every year — about {fmt(maxV)} by year {YEARS}. A Mycelium node is ~{fmt(NODE)} in parts, once. <span class="dim">(prices as listed June 2026)</span></figcaption>
 </figure>
 
 <style>
@@ -62,7 +69,9 @@ const nodeY = y(NODE);
   .xlab { fill: var(--text-dim); font-family: var(--font-mono); font-size: 12px; text-anchor: middle; }
   .nodelab { fill: var(--accent); font-family: var(--font-mono); font-size: 12px; text-anchor: end; }
   [data-theme="paper"] .nodelab { fill: var(--accent-deep); }
-  .toplab { fill: var(--text-dim); font-family: var(--font-mono); font-size: 12px; text-anchor: middle; }
+  .barlab { fill: var(--text-dim); font-family: var(--font-mono); font-size: 11px; text-anchor: middle; }
+  .barlab.key { fill: var(--text); font-weight: 600; font-size: 12px; }
+  [data-theme="paper"] .barlab.key { fill: var(--ink-dark); }
   .d6-key { display: flex; flex-wrap: wrap; gap: var(--s-4); font-size: 12px; color: var(--text-dim); margin-top: var(--s-3); }
   .d6-key .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
   .sw.hw { background: color-mix(in srgb, var(--text-dim) 55%, transparent); }
