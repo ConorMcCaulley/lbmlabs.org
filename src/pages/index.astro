@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import DiagramSenseMesh from "../components/DiagramSenseMesh.astro";
 import DiagramTerrain from "../components/DiagramTerrain.astro";
+import DiagramGap from "../components/DiagramGap.astro";
 import PanelCiphertext from "../components/PanelCiphertext.astro";
 import ChartCost from "../components/ChartCost.astro";
 /* Full homepage scroll (E2). Copy = locked B1 with B7 claims-gate fixes
@@ -59,22 +60,9 @@ const repo = "#"; // A7: cleaned LBM Labs public repo
       satellite can spot an algal bloom spreading across a whole lake; it can't
       tell you the nitrate levels in the water on Tuesday night. That answer only
       comes from a sensor in the water, reading every few minutes.</p>
-      <div class="split">
-        <div class="split-broad" aria-label="A coarse satellite tile — one pixel covers a whole hillside">
-          <span class="broad-note mono">≈ 250&nbsp;m / pixel</span>
-          <span>satellite · broad</span>
-        </div>
-        <div class="split-deep" aria-label="One node's continuous readings — a falling temperature trend">
-          <span class="d5-lbl mono">leaf01 · deep · every few minutes</span>
-          <svg class="spark" viewBox="0 0 240 52" aria-hidden="true" preserveAspectRatio="none">
-            <polyline points="8,9 31,14 53,17 76,24 99,21 121,28 144,33 167,29 189,38 212,42 232,44"/>
-          </svg>
-          <p class="reading mono">18:23 <span class="ok">18.16</span> · 18:33 18.05 ·
-          18:43 17.91 · 18:53 <span class="ok">17.74</span></p>
-        </div>
-      </div>
-      <p class="dim small">Same hour, same place: a satellite sees one flat dot;
-      a node watches it actually move.</p>
+      <DiagramGap />
+      <p class="dim small">The bloom is visible from orbit; the nitrate driving it
+      is not. Only a sensor in the water catches what a satellite never will.</p>
     </div>
   </section>
 
@@ -287,21 +275,6 @@ DRILL PASS</div>
   /* lead paragraph under an h2 */
   .section-lead { font-size: clamp(1.05rem, 1.5vw, 1.2rem); color: var(--text-dim); max-width: 60ch; margin-top: var(--s-3); }
 
-  /* §2 split */
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); margin: var(--s-5) 0 var(--s-3); }
-  .split > div { border: 1px solid var(--rule); border-radius: var(--r-md); min-height: 150px; padding: var(--s-4); display: flex; flex-direction: column; justify-content: flex-end; }
-  .split-broad { justify-content: space-between; background:
-    repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ink-dark) 8%, transparent) 0deg 90deg, transparent 90deg 180deg) 0 0 / 28px 28px,
-    linear-gradient(135deg, #cfd6c6, #b9c3b0); color: var(--ink-dark); }
-  .split-broad span { font-family: var(--font-mono); font-size: 12px; opacity: 0.8; }
-  .split-broad .broad-note { align-self: flex-start; opacity: 0.62; }
-  .split-deep { background: var(--section-raise); gap: var(--s-2); }
-  .split-deep .d5-lbl { color: var(--accent-deep); font-size: 12px; }
-  .split-deep .spark { width: 100%; height: 46px; display: block; }
-  .split-deep .spark polyline { fill: none; stroke: var(--accent-deep); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-  .split-deep .reading { font-size: 0.95rem; margin: 0; color: var(--text); }
-  .split-deep .ok { color: var(--accent-deep); }
-
   /* §3 three-up */
   .threeup { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5); margin: var(--s-5) 0; }
   .threeup h3 { color: var(--accent); margin-bottom: var(--s-2); }
@@ -326,7 +299,7 @@ DRILL PASS</div>
   .links a { color: var(--accent); }
 
   @media (max-width: 720px) {
-    .split, .threeup { grid-template-columns: 1fr; }
+    .threeup { grid-template-columns: 1fr; }
     .nav nav { gap: var(--s-4); }
   }
 </style>
