@@ -30,7 +30,8 @@ export const home = {
   hero: {
     kicker: `LBM Labs — open, public-good infrastructure for understanding the natural world.`,
     heading: `The network for the Earth.`,
-    sub: `The natural world is changing faster than it's being measured, and good monitoring costs thousands per site — so the small places go dark. Mycelium is a free, open, encrypted sensor network anyone can build: low-cost nodes that pass readings to each other over radio until they reach a spreadsheet you own. Owned by no one.`,
+    sub: `Our biosphere is changing faster than ever, but good field data is often challenging and expensive to collect. Part of that challenge is the price and complexity of existing telemetry systems that rely on satellite or cellular backhaul.
+Mycelium is an open-source, mesh telemetry network designed to make the (measuring the world around us) (adding telemetry to your existing sensors) cheap, easy, and reliable. `,
     // sample telemetry line along the bottom edge (3 parts; middle is green)
     statusPre: `leaf01 · last reading 3 min ago · temp_c 18.4 ·`,
     statusOk: `0 readings lost since deploy`,
@@ -39,19 +40,19 @@ export const home = {
     // (each is paired with its coloured swatch): gateway, node, packet, buffered.
     legendTitle: `Mycelium network — a live representation`,
     legendKeys: [`gateway`, `node`, `data packet`, `buffered reading`],
-    legendHintLead: `Click any node or gateway`,   // shown bold
+    legendHintLead: `Click any node or gateway`, // shown bold
     legendHintTail: `to knock it out — watch the rest of the network reroute itself.`,
-    legendHintShortLead: `Tap a node or gateway`,   // bold, small screens
+    legendHintShortLead: `Tap a node or gateway`, // bold, small screens
     legendHintShortTail: `— watch it reroute.`,
   },
 
   // ── 2 · The gap ─────────────────────────────────────────────────────
   gap: {
     kicker: `The gap.`,
-    heading: `Good ground truth is priced like a luxury.`,
+    heading: `Getting data out of the field is expensive.`,
     body: [
-      `The people closest to the land — watershed groups, small farms, tribes, researchers, teachers — are priced out of knowing what it's doing. A single commercial monitoring station runs past a thousand dollars before the first sensor, plus a data plan every year, so measurement goes where grants and mandates send it — and everywhere else declines in the dark.`,
-      `Satellites fill in part of the picture, but they see broad, not deep: a satellite can spot an algal bloom spreading across a whole lake; it can't tell you the nitrate levels in the water on Tuesday night. That answer only comes from a sensor in the water, reading every few minutes.`,
+      `Existing telemetry systems are costly. Hardware runs from $1,000 to over $5,000 dollars per unit, plus ongoing data costs which can be as high as $600 dollars per year. DIY solutions do exist, but are often more challenging to stand up and still require traditional cellular or satellite data plans. Many of the people closest to the land — watershed groups, small farms, tribes, researchers, teachers — are unable to use the existing option because of cost and technical roadblocks. `,
+      `Mycelium is designed to make it easier, cheaper, and more reliable to telemeter sensors in the field. It uses low cost, open-source hardware than you can build easily from off the shelf parts and a fully open and free software stack. While it currently suffers from some of the same issues as other DIY telemetry solutions (namely needing some technical knowledge to understand and set up the hardware), I am working hard to build a no-terminal setup app that will streamline the entire process enough to allow anyone to stand up a node in a few minutes. `,
     ],
     caption: `The bloom is visible from orbit; the nitrate driving it is not. Only a sensor in the water catches what a satellite never will.`,
   },
@@ -60,11 +61,21 @@ export const home = {
   how: {
     kicker: `How it works.`,
     heading: `Sense → Mesh → Your data.`,
-    lead: `A mesh network has no cell tower and no hub. Each node passes readings to the next one over license-free radio, hop by hop, until they reach a gateway with a way out — so adding a node extends the network for everyone behind it, and no carrier ever has to agree to cover the canyon.`,
+    lead: `Rather than relying on satellites or cell towers, mesh networks pass readings from one sensor node to the next, hop by hop, until they reach a gateway with internet access. Adding a node extends and strengthens the network for everyone. `,
     cards: [
-      { title: `Sense`, body: `Any sensor, from a $7 thermistor to a research sonde, plugs into the same node. Readings are sealed with AES-256-GCM the moment they're taken.` },
-      { title: `Mesh`, body: `Every node is designed to relay: nodes find each other over license-free LoRa radio and carry each other's traffic, so your node extends the network for everyone behind it — and the sealed readings stay unreadable at every hop.` },
-      { title: `Your data`, body: `A gateway forwards each sealed reading to the destination its owner chose — today a Google Sheet you own. No platform, no subscription, no one between you and your data.` },
+      {
+        title: `Sense`,
+        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. Readings are encrypted with AES-256-GCM the moment they're taken.`,
+      },
+      {
+        title: `Mesh`,
+        body: `Every node is designed to relay: nodes find each other over license-free, 915MHz Long Range radio and relay each other's traffic. Because packet routing and link optimization take place automatically, the network is continually reconfiguring itself to find the shortest egress pathway. The same mechanism allows the network to reroute around node or gateway outages without any outside intervention.`,
+      },
+      {
+        title: `Your data`,
+        body: `Encrypted readings stay unreadable at every hop, meaning users can trust their data is safe even if they don’t know whose nodes their data flows through. A gateway forwards each encrypted reading over the internet to the destination its owner chose. Right now that means a Google Sheet but my next goal is to stand up integrations for the most common hosted database platforms.  
+`,
+      },
     ],
   },
 
@@ -98,8 +109,13 @@ export const home = {
       `Every reading is committed to disk the moment it's taken and deleted only after its destination cryptographically confirms receipt. Outages buffer and drain. Nodes watch themselves — and recover from wedges, crashes, and even a radio knocked off the bus, on their own.`,
       `This is verified by sabotaging the bench network with scripted failure drills:`,
     ],
-    badges: [`gateway outage ✓`, `node restart ✓`, `destination blackhole ✓`, `radio drop ✓`],
-    punch: `Zero readings lost.`,   // shown bold
+    badges: [
+      `gateway outage ✓`,
+      `node restart ✓`,
+      `destination blackhole ✓`,
+      `radio drop ✓`,
+    ],
+    punch: `Zero readings lost.`, // shown bold
     caption: `A real drill run against the real (bench) network, June 2026. The drills ship in the repo — run them yourself.`,
   },
 
