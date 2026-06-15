@@ -67,7 +67,7 @@ Mycelium is an open-source, mesh telemetry network designed to make the (measuri
     cards: [
       {
         title: `Sense`,
-        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. Readings are encrypted with AES-256-GCM the moment they're taken.`,
+        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. (I am activly working on integretion for I^2C, SPI, and OneWire sensors) Readings are encrypted with AES-256-GCM the moment they're taken.`,
       },
       {
         title: `Mesh`,
@@ -93,7 +93,7 @@ Mycelium is an open-source, mesh telemetry network designed to make the (measuri
   reach: {
     kicker: `Reach.`,
     heading: `Built for the places cell towers never reached.`,
-    body: `The valleys, forests, and rangelands that need monitoring most are exactly where coverage ends — where the only commercial answer has been a satellite subscription. Mycelium's answer is the mesh itself: every node relays by default, so each sensor anyone deploys extends the range of the mesh for everyone. Want to monitor water quality in a deep canyon without cell coverage? Each node you deploy extends the network farther up the canyon. No Wifi or other gateways nearby? I am working on a field gateway with a cellular or satellite connection. Instead of needing a data plan for each individual sensor, one data plan for the gateway connects the entire network to the internet, even in the most remote of locations. (I will publish the real range once it's field-tested; until then the picture below is schematic.)`,
+    body: `The valleys, forests, and rangelands that need monitoring most are exactly where coverage ends — where the only commercial answer has been a satellite subscription. Mycelium's answer is the mesh itself: every node relays by default, so each sensor anyone deploys extends the range of the mesh for everyone. Want to monitor water quality in a deep canyon without cell coverage? Each node you deploy extends the network farther up the canyon. No Wifi or other gateways nearby? I am working on a field gateway with a cellular or satellite connection. Instead of needing a data plan for each individual sensor, one data plan for the gateway connects the entire network to the internet, even in the most remote of locations.`,
   },
 
   // ── 6 · Encryption / privacy ────────────────────────────────────────
