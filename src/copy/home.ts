@@ -54,6 +54,8 @@ Mycelium is an open-source, mesh telemetry network designed to make the (measuri
       `Existing telemetry systems are costly. Hardware runs from $1,000 to over $5,000 dollars per unit, plus ongoing data costs which can be as high as $600 dollars per year. DIY solutions do exist, but are often more challenging to stand up and still require traditional cellular or satellite data plans. Many of the people closest to the land — watershed groups, small farms, tribes, researchers, teachers — are unable to use the existing option because of cost and technical roadblocks. `,
       `Mycelium is designed to make it easier, cheaper, and more reliable to telemeter sensors in the field. It uses low cost, open-source hardware than you can build easily from off the shelf parts and a fully open and free software stack. While it currently suffers from some of the same issues as other DIY telemetry solutions (namely needing some technical knowledge to understand and set up the hardware), I am working hard to build a no-terminal setup app that will streamline the entire process enough to allow anyone to stand up a node in a few minutes. `,
     ],
+    // NOTE: caption is stashed — not shown on the page right now (the satellite
+    // visual it described was removed 2026-06-15). Kept here for when/if it returns.
     caption: `The bloom is visible from orbit; the nitrate driving it is not. Only a sensor in the water catches what a satellite never will.`,
   },
 

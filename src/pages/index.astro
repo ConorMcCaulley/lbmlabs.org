@@ -2,7 +2,7 @@
 import Base from "../layouts/Base.astro";
 import DiagramSenseMesh from "../components/DiagramSenseMesh.astro";
 import DiagramTerrain from "../components/DiagramTerrain.astro";
-import DiagramGap from "../components/DiagramGap.astro";
+// import DiagramGap from "../components/DiagramGap.astro"; // stashed 2026-06-15 (see gap section)
 import PanelCiphertext from "../components/PanelCiphertext.astro";
 import ChartCost from "../components/ChartCost.astro";
 import { home as t } from "../copy/home";
@@ -59,8 +59,11 @@ const repo = "#"; // A7: cleaned LBM Labs public repo
       <p class="kicker">{t.gap.kicker}</p>
       <h2>{t.gap.heading}</h2>
       {t.gap.body.map((para) => <p>{para}</p>)}
-      <DiagramGap />
-      <p class="dim small">{t.gap.caption}</p>
+      {/* Satellite/nitrate visual + caption stashed 2026-06-15. To restore:
+          uncomment the DiagramGap import above, then re-add here:
+            <DiagramGap />
+            <p class="dim small">{t.gap.caption}</p>
+          Component kept at components/DiagramGap.astro; caption text kept at home.ts (gap.caption). */}
     </div>
   </section>
 
