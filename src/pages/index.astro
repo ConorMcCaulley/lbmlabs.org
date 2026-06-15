@@ -44,6 +44,19 @@ const repo = "#"; // A7: cleaned LBM Labs public repo
     </div>
     <p class="statusline mono">leaf01 · last reading 3 min ago · temp_c 18.4 ·
       <span class="ok">0 readings lost since deploy</span> · <span class="dim">(sample)</span></p>
+
+    <aside class="hero-legend" aria-label="How to read the Mycelium network animation">
+      <p class="hl-title mono">Mycelium network — a live representation</p>
+      <ul class="hl-keys">
+        <li><span class="hl-sw hl-gw"></span>gateway</li>
+        <li><span class="hl-sw hl-node"></span>node</li>
+        <li><span class="hl-sw hl-packet"></span>data packet</li>
+        <li><span class="hl-sw hl-buffer"></span>buffered reading</li>
+      </ul>
+      <p class="hl-hint hl-hint-full mono"><strong>Click any node or gateway</strong> to knock it
+      out — watch the rest of the network reroute itself.</p>
+      <p class="hl-hint hl-hint-short mono"><strong>Tap a node or gateway</strong> — watch it reroute.</p>
+    </aside>
   </section>
 
   <!-- ── 2 · The gap (light) ─────────────────────────────────────── -->
@@ -272,6 +285,29 @@ DRILL PASS</div>
   .statusline { position: absolute; left: 8vw; bottom: 4vh; z-index: 1; font-size: var(--t-small); color: var(--dim); pointer-events: none; }
   .statusline .ok { color: var(--accent); }
 
+  /* hero legend — orients first-time viewers + surfaces the click interaction
+     (the in-iframe hint is hidden in ?bare mode). Top-right so it never
+     collides with the bottom-left statusline. pointer-events:none keeps the
+     whole canvas behind it clickable. */
+  .hero-legend {
+    position: absolute; top: 66px; right: 8vw; z-index: 2; pointer-events: none;
+    width: 232px; padding: 11px 13px; border-radius: var(--r-md);
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .hl-title { color: var(--ink); font-size: 11px; letter-spacing: 0.03em; margin: 0 0 9px; opacity: 0.92; }
+  .hl-keys { list-style: none; margin: 0 0 9px; padding: 0; display: grid; grid-template-columns: 1fr; gap: 7px; }
+  .hl-keys li { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 12px; font-family: var(--font-mono); white-space: nowrap; }
+  .hl-sw { width: 12px; height: 12px; flex: none; border-radius: 50%; }
+  .hl-node   { background: radial-gradient(circle, var(--accent) 0 40%, transparent 44%); }
+  .hl-packet { background: radial-gradient(circle, var(--accent-hot) 0 26%, color-mix(in srgb, var(--accent) 55%, transparent) 30% 50%, transparent 56%); }
+  .hl-gw     { border: 1.4px solid var(--accent); background: radial-gradient(circle, var(--accent-hot) 0 30%, transparent 36%); }
+  .hl-buffer { background: radial-gradient(circle, var(--amber) 0 42%, transparent 46%); border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent); }
+  .hl-hint { color: var(--dim); font-size: 11px; line-height: 1.5; margin: 0; }
+  .hl-hint strong { color: var(--accent); font-weight: 600; }
+  .hl-hint-short { display: none; }   /* desktop shows the full hint */
+
   /* lead paragraph under an h2 */
   .section-lead { font-size: clamp(1.05rem, 1.5vw, 1.2rem); color: var(--text-dim); max-width: 60ch; margin-top: var(--s-3); }
 
@@ -301,5 +337,20 @@ DRILL PASS</div>
   @media (max-width: 720px) {
     .threeup { grid-template-columns: 1fr; }
     .nav nav { gap: var(--s-4); }
+    /* top-right would collide with the copy on narrow screens. Take the legend
+       out of absolute flow and pin it to the bottom of the hero's flex column
+       (margin-top:auto): copy flows to the top, legend to the bottom, animation
+       between — and on very short phones they stack with a tiny scroll instead
+       of overlapping. Trim it (no title, 2-col keys, short hint) to stay compact;
+       the sample statusline yields the space. */
+    /* copy is top-aligned on mobile (legend pinned to the bottom), so pad past
+       the sticky nav and guarantee space above the legend when stacked. */
+    .hero { gap: var(--s-4); padding-top: 64px; }
+    .hero-legend { position: static; inset: auto; margin: auto 6vw 3.5vh; width: auto; padding: 9px 11px; }
+    .hl-title { display: none; }
+    .hl-keys { grid-template-columns: 1fr 1fr; gap: 5px 12px; margin-bottom: 7px; }
+    .hl-hint-full { display: none; }
+    .hl-hint-short { display: block; }
+    .statusline { display: none; }
   }
 </style>
