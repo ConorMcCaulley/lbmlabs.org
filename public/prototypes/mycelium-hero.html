@@ -306,7 +306,9 @@ function resize() {
   if (oldW > 0 && oldH > 0 && nodes.length && (W !== oldW || H !== oldH)) {
     const sx = W / oldW, sy = H / oldH;
     for (const n of nodes) { n.x *= sx; n.y *= sy; }
-    routeDirty = true; // range is in px → re-evaluate who can hear whom
+    scaleGeometry(sx, sy); // links/strands move with their nodes (else they strand mid-air)
+    routeDirty = true;     // range is in px → re-evaluate who can hear whom
+    if (staticMode) renderStaticStill(); // the still doesn't loop — redraw it in place
   }
 }
 addEventListener("resize", resize);
@@ -354,6 +356,21 @@ function alongLink(g, d) {
   return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
 }
 function retract(geom, now) { if (geom) retracting.push({ pts: geom.pts, t0: now }); }
+
+// On viewport resize the nodes are rescaled to the new size; their link
+// and growth geometry has to move WITH them, or every strand is stranded
+// at its old coordinates — a drawn trace with no node at either end, while
+// the node itself sits bare. Scale every stored point by the same factors.
+function scaleGeometry(sx, sy) {
+  const sp = pts => { for (const p of pts) { p[0] *= sx; p[1] *= sy; } };
+  const sl = (sx + sy) / 2;                       // length-ish quantities
+  for (const n of nodes) {
+    if (n.link) { sp(n.link.pts); n.link = linkGeom(n.link.pts); }
+    if (n.grow) { sp(n.grow.pts); n.grow.tx *= sx; n.grow.ty *= sy; n.grow.len *= sl; n.grow.d0 *= sl; }
+  }
+  for (const r of retracting) sp(r.pts);
+  for (const p of pulses) if (!p.held) p.t *= sl;  // keep pulses' along-link position
+}
 
 function startGrow(i, target) {
   const n = nodes[i], t = nodes[target];
@@ -873,6 +890,11 @@ function growStatic() {
   }
   while (gatewayCount() < gatewayTarget()) addGateway();
   settleRoutingInstant();
+  renderStaticStill();
+}
+// One frame of the reduced-motion still — reused on resize so the static
+// image redraws at the new size instead of freezing at the old one.
+function renderStaticStill() {
   const now = performance.now();
   ctx.clearRect(0, 0, W, H);
   drawLinks(now);
