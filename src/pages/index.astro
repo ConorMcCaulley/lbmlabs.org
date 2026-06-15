@@ -5,12 +5,11 @@ import DiagramTerrain from "../components/DiagramTerrain.astro";
 import DiagramGap from "../components/DiagramGap.astro";
 import PanelCiphertext from "../components/PanelCiphertext.astro";
 import ChartCost from "../components/ChartCost.astro";
-/* Full homepage scroll (E2). Copy = locked B1 with B7 claims-gate fixes
-   applied (F1 reach as design intent, F2 relay as architecture, F4 node
-   restart, F5 no "in the field"). Hero animation embedded via ?bare
-   (E-phase extracts it into a component). Evidence/visuals built from
-   real data where available (C1 prices, 168 tests, envelope shape);
-   C2/C5/C7 wire the rest. */
+import { home as t } from "../copy/home";
+/* Full homepage scroll (E2). All prose lives in src/copy/home.ts (edit
+   copy there, not here) and is referenced below as t.<section>.<field>.
+   Structure, styling, and the data/evidence visuals stay in this file.
+   Hero animation embedded via ?bare. */
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const repo = "#"; // A7: cleaned LBM Labs public repo
 ---
@@ -30,75 +29,51 @@ const repo = "#"; // A7: cleaned LBM Labs public repo
   <section class="hero" id="main">
     <iframe class="hero-bg" src={`${base}/prototypes/mycelium-hero.html?bare=1`} title="Living diagram of the Mycelium network" loading="eager"></iframe>
     <div class="hero-copy wrap">
-      <p class="kicker">LBM Labs — open, public-good infrastructure for understanding the natural world.</p>
-      <h1>The network for the Earth.</h1>
-      <p class="sub">The natural world is changing faster than it's being measured,
-      and good monitoring costs thousands per site — so the small places go dark.
-      Mycelium is a free, open, encrypted sensor network anyone can build:
-      low-cost nodes that pass readings to each other over radio until they reach
-      a spreadsheet you own. Owned by no one.</p>
+      <p class="kicker">{t.hero.kicker}</p>
+      <h1>{t.hero.heading}</h1>
+      <p class="sub">{t.hero.sub}</p>
       <div class="ctas">
-        <a class="btn-primary" href={`${base}/build`}>Build one</a>
-        <a class="btn-ghost" href={repo}>Read the code</a>
+        <a class="btn-primary" href={`${base}/build`}>{t.cta.build}</a>
+        <a class="btn-ghost" href={repo}>{t.cta.code}</a>
       </div>
     </div>
-    <p class="statusline mono">leaf01 · last reading 3 min ago · temp_c 18.4 ·
-      <span class="ok">0 readings lost since deploy</span> · <span class="dim">(sample)</span></p>
+    <p class="statusline mono">{t.hero.statusPre}
+      <span class="ok">{t.hero.statusOk}</span> · <span class="dim">{t.hero.statusNote}</span></p>
 
     <aside class="hero-legend" aria-label="How to read the Mycelium network animation">
-      <p class="hl-title mono">Mycelium network — a live representation</p>
+      <p class="hl-title mono">{t.hero.legendTitle}</p>
       <ul class="hl-keys">
-        <li><span class="hl-sw hl-gw"></span>gateway</li>
-        <li><span class="hl-sw hl-node"></span>node</li>
-        <li><span class="hl-sw hl-packet"></span>data packet</li>
-        <li><span class="hl-sw hl-buffer"></span>buffered reading</li>
+        <li><span class="hl-sw hl-gw"></span>{t.hero.legendKeys[0]}</li>
+        <li><span class="hl-sw hl-node"></span>{t.hero.legendKeys[1]}</li>
+        <li><span class="hl-sw hl-packet"></span>{t.hero.legendKeys[2]}</li>
+        <li><span class="hl-sw hl-buffer"></span>{t.hero.legendKeys[3]}</li>
       </ul>
-      <p class="hl-hint hl-hint-full mono"><strong>Click any node or gateway</strong> to knock it
-      out — watch the rest of the network reroute itself.</p>
-      <p class="hl-hint hl-hint-short mono"><strong>Tap a node or gateway</strong> — watch it reroute.</p>
+      <p class="hl-hint hl-hint-full mono"><strong>{t.hero.legendHintLead}</strong> {t.hero.legendHintTail}</p>
+      <p class="hl-hint hl-hint-short mono"><strong>{t.hero.legendHintShortLead}</strong> {t.hero.legendHintShortTail}</p>
     </aside>
   </section>
 
   <!-- ── 2 · The gap (light) ─────────────────────────────────────── -->
   <section data-theme="paper">
     <div class="wrap narrow">
-      <p class="kicker">The gap.</p>
-      <h2>Good ground truth is priced like a luxury.</h2>
-      <p>The people closest to the land — watershed groups, small farms, tribes,
-      researchers, teachers — are priced out of knowing what it's doing. A single
-      commercial monitoring station runs past a thousand dollars before the first
-      sensor, plus a data plan every year, so measurement goes where grants and
-      mandates send it — and everywhere else declines in the dark.</p>
-      <p>Satellites fill in part of the picture, but they see broad, not deep: a
-      satellite can spot an algal bloom spreading across a whole lake; it can't
-      tell you the nitrate levels in the water on Tuesday night. That answer only
-      comes from a sensor in the water, reading every few minutes.</p>
+      <p class="kicker">{t.gap.kicker}</p>
+      <h2>{t.gap.heading}</h2>
+      {t.gap.body.map((para) => <p>{para}</p>)}
       <DiagramGap />
-      <p class="dim small">The bloom is visible from orbit; the nitrate driving it
-      is not. Only a sensor in the water catches what a satellite never will.</p>
+      <p class="dim small">{t.gap.caption}</p>
     </div>
   </section>
 
   <!-- ── 3 · How it works (dark) ─────────────────────────────────── -->
   <section>
     <div class="wrap narrow">
-      <p class="kicker">How it works.</p>
-      <h2>Sense → Mesh → Your data.</h2>
-      <p class="section-lead">A mesh network has no cell tower and no hub. Each node
-      passes readings to the next one over license-free radio, hop by hop, until
-      they reach a gateway with a way out — so adding a node extends the network for
-      everyone behind it, and no carrier ever has to agree to cover the canyon.</p>
+      <p class="kicker">{t.how.kicker}</p>
+      <h2>{t.how.heading}</h2>
+      <p class="section-lead">{t.how.lead}</p>
       <div class="threeup">
-        <div><h3>Sense</h3><p class="small">Any sensor, from a $7 thermistor to
-        a research sonde, plugs into the same node. Readings are sealed with
-        AES-256-GCM the moment they're taken.</p></div>
-        <div><h3>Mesh</h3><p class="small">Every node is designed to relay:
-        nodes find each other over license-free LoRa radio and carry each
-        other's traffic, so your node extends the network for everyone behind
-        it — and the sealed readings stay unreadable at every hop.</p></div>
-        <div><h3>Your data</h3><p class="small">A gateway forwards each sealed
-        reading to the destination its owner chose — today a Google Sheet you
-        own. No platform, no subscription, no one between you and your data.</p></div>
+        {t.how.cards.map((c) => (
+          <div><h3>{c.title}</h3><p class="small">{c.body}</p></div>
+        ))}
       </div>
       <DiagramSenseMesh />
     </div>
@@ -107,14 +82,9 @@ const repo = "#"; // A7: cleaned LBM Labs public repo
   <!-- ── 4 · Free (light) ────────────────────────────────────────── -->
   <section data-theme="paper">
     <div class="wrap narrow">
-      <p class="kicker">Free. Actually free.</p>
-      <h2>Not discounted. Not freemium. No markup.</h2>
-      <p>Mycelium is a public good. The complete design — parts list, firmware,
-      software, assembly guides — is published, and you build a node from
-      off-the-shelf parts: Raspberry Pi, commodity LoRa radio, standard cables.
-      There is no markup and no subscription anywhere in the stack: the design
-      is free, the radio band is license-free, and your data lands somewhere
-      you already own.</p>
+      <p class="kicker">{t.free.kicker}</p>
+      <h2>{t.free.heading}</h2>
+      <p>{t.free.body}</p>
       <ChartCost />
       <div class="evidence" role="img" aria-label="Bill of materials receipt for one Mycelium bench leaf, totaling about $176">
 <span class="lbl">bom · bench leaf · renders from the repo</span>Raspberry Pi Zero 2 W + microSD .... $32
@@ -125,23 +95,16 @@ LED + breadboard + jumpers ......... $ 3
 project box · misc ................. $24
 ———————————————————————————————————————
 TOTAL .......................... <span class="ok">~$176</span></div>
-      <p class="dim small">Price it yourself — this list renders straight from the repo.</p>
+      <p class="dim small">{t.free.caption}</p>
     </div>
   </section>
 
   <!-- ── 5 · Reach (dark) ────────────────────────────────────────── -->
   <section>
     <div class="wrap narrow">
-      <p class="kicker">Reach.</p>
-      <h2>Built for the places cell towers never reached.</h2>
-      <p>The valleys, forests, and rangelands that need monitoring most are
-      exactly where coverage ends — where the only commercial answer has been a
-      satellite subscription. Mycelium's answer is the mesh itself: every node
-      is designed to relay by default, so each sensor anyone deploys is meant to
-      carry the network further. It's designed so that a node on the ridgeline
-      brings the canyon behind it online — coverage compounding by addition, not
-      infrastructure. (The real range gets published once it's field-tested;
-      until then the picture below is schematic.)</p>
+      <p class="kicker">{t.reach.kicker}</p>
+      <h2>{t.reach.heading}</h2>
+      <p>{t.reach.body}</p>
       <DiagramTerrain />
     </div>
   </section>
@@ -149,13 +112,9 @@ TOTAL .......................... <span class="ok">~$176</span></div>
   <!-- ── 6 · Encryption (dark) ───────────────────────────────────── -->
   <section>
     <div class="wrap narrow">
-      <p class="kicker">Your data stays yours.</p>
-      <h2>The relays can't read what they carry.</h2>
-      <p>Every reading is encrypted on the sensor node and decrypted only at its
-      owner's destination — the mesh in between, including whoever runs the
-      gateway, sees ciphertext and a delivery address. That's not a policy; it's
-      the architecture. Strangers' networks can strengthen each other without
-      sharing anything but radio waves.</p>
+      <p class="kicker">{t.privacy.kicker}</p>
+      <h2>{t.privacy.heading}</h2>
+      <p>{t.privacy.body}</p>
       <PanelCiphertext />
     </div>
   </section>
@@ -163,41 +122,29 @@ TOTAL .......................... <span class="ok">~$176</span></div>
   <!-- ── 7 · Reliability (dark) ──────────────────────────────────── -->
   <section>
     <div class="wrap narrow">
-      <p class="kicker">Built like infrastructure, not a gadget.</p>
-      <h2>Reliability and survivability are the core of the Mycelium architecture.</h2>
-      <p>Every reading is committed to disk the moment it's taken and deleted
-      only after its destination cryptographically confirms receipt. Outages
-      buffer and drain. Nodes watch themselves — and recover from wedges,
-      crashes, and even a radio knocked off the bus, on their own.</p>
-      <p>This is verified by sabotaging the bench network with scripted
-      failure drills:</p>
+      <p class="kicker">{t.reliability.kicker}</p>
+      <h2>{t.reliability.heading}</h2>
+      {t.reliability.body.map((para) => <p>{para}</p>)}
       <div class="badges">
-        <span class="badge">gateway outage ✓</span>
-        <span class="badge">node restart ✓</span>
-        <span class="badge">destination blackhole ✓</span>
-        <span class="badge">radio drop ✓</span>
+        {t.reliability.badges.map((b) => <span class="badge">{b}</span>)}
       </div>
-      <p class="small"><strong>Zero readings lost.</strong></p>
+      <p class="small"><strong>{t.reliability.punch}</strong></p>
       <div class="evidence" role="img" aria-label="Failure drill output ending in zero readings lost">
 <span class="lbl">$ ./scripts/drills/drill-gateway-outage.sh</span>↯ gateway killed mid-batch
 · leaf buffering to disk … 7 readings queued
 · gateway back · draining queue …
 ✓ all 7 delivered · <span class="ok">0 readings lost</span>
 DRILL PASS</div>
-      <p class="dim small">A real drill run against the real (bench) network, June 2026.
-      The drills ship in the repo — run them yourself.</p>
+      <p class="dim small">{t.reliability.caption}</p>
     </div>
   </section>
 
   <!-- ── 8 · Open by default (light) ─────────────────────────────── -->
   <section data-theme="paper">
     <div class="wrap narrow">
-      <p class="kicker">Open by default.</p>
-      <h2>Don't just trust. Check.</h2>
-      <p>Everything is public: the firmware, the node and gateway software, the
-      destination code, the parts list, the roadmap. The test suite runs on any
-      laptop, and the failure drills that back the claims above are scripts in
-      the repo — the evidence is re-runnable, not just readable.</p>
+      <p class="kicker">{t.open.kicker}</p>
+      <h2>{t.open.heading}</h2>
+      <p>{t.open.body}</p>
       <div class="evidence" role="img" aria-label="Terminal: 168 tests passed">
 <span class="lbl">$ pytest</span>........................................................
 <span class="ok">168 passed</span> in 0.33s</div>
@@ -209,37 +156,32 @@ DRILL PASS</div>
   <!-- ── 9 · Roadmap (dark) ──────────────────────────────────────── -->
   <section>
     <div class="wrap narrow">
-      <p class="kicker">Where this is going.</p>
-      <h2>A bench-proven core, growing toward the field.</h2>
-      <p>The encrypted pipeline, the mesh, and the reliability layer all run end to
-      end on the bench today. What comes next is making it survive real weather and
-      easy enough that you never touch a terminal — built in the open, one honest
-      milestone at a time. Two pieces are in active development right now.</p>
+      <p class="kicker">{t.roadmap.kicker}</p>
+      <h2>{t.roadmap.heading}</h2>
+      <p>{t.roadmap.body}</p>
       <ol class="roadmap mono">
-        <li class="done">bench network running end to end <span class="ok">✓</span></li>
-        <li class="wip">field hardware testing <span class="amber">◐&nbsp;in&nbsp;progress</span></li>
-        <li class="wip">zero-terminal setup app <span class="amber">◐&nbsp;in&nbsp;progress</span></li>
-        <li>fleet dashboards</li>
+        {t.roadmap.items.map((it) => (
+          <li class={it.state === "done" ? "done" : it.state === "wip" ? "wip" : undefined}>
+            {it.label}
+            {it.state === "done" && <span class="ok"> ✓</span>}
+            {it.state === "wip" && <span class="amber">{" ◐ in progress"}</span>}
+          </li>
+        ))}
       </ol>
-      <p class="dim small">All of it public, all of it free.</p>
+      <p class="dim small">{t.roadmap.caption}</p>
     </div>
   </section>
 
   <!-- ── 10 · Mission (dark) ─────────────────────────────────────── -->
   <section class="mission">
     <div class="wrap narrow">
-      <p class="kicker">Knowing shouldn't be a luxury.</p>
-      <h2>Protecting anything starts with knowing what's happening to it.</h2>
-      <p>And for most of the living world, nobody is measuring. Mycelium exists
-      to make the measuring cheap, trustworthy, and unowned, so the small places
-      get watched too.</p>
-      <p>It's named for the network under the forest floor: invisible
-      infrastructure that connects living things, moves what's needed to where
-      it's needed, and belongs to no one in particular.</p>
+      <p class="kicker">{t.mission.kicker}</p>
+      <h2>{t.mission.heading}</h2>
+      {t.mission.body.map((para) => <p>{para}</p>)}
       <div class="ctas">
-        <a class="btn-primary" href={`${base}/build`}>Build one</a>
-        <a class="btn-ghost" href={repo}>Read the code</a>
-        <a class="storylink" href={`${base}/why`}>the story behind Mycelium →</a>
+        <a class="btn-primary" href={`${base}/build`}>{t.cta.build}</a>
+        <a class="btn-ghost" href={repo}>{t.cta.code}</a>
+        <a class="storylink" href={`${base}/why`}>{t.mission.storyLink}</a>
       </div>
     </div>
   </section>
@@ -252,7 +194,7 @@ DRILL PASS</div>
         <a href={`${base}/lab`}>Lab</a> · <a href={repo}>GitHub&nbsp;↗</a> ·
         <a href="mailto:conormccaulley@gmail.com">Email</a>
       </nav>
-      <p class="brandline">LBM Labs builds open, public-good infrastructure for understanding the natural world.</p>
+      <p class="brandline">{t.footer.brandline}</p>
       <p class="dim small mono">Apache-2.0 · CC BY 4.0 · No analytics on this site — no one's watching you read about watching creeks.</p>
     </div>
   </footer>
