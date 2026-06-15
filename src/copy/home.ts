@@ -83,9 +83,9 @@ Mycelium is an open-source, mesh telemetry network designed to make the (measuri
 
   // ── 4 · Free (the BOM receipt block lives in index.astro) ───────────
   free: {
-    kicker: `Free. Actually free.`,
-    heading: `Not discounted. Not freemium. No markup.`,
-    body: `Mycelium is a public good. The complete design — parts list, firmware, software, assembly guides — is published, and you build a node from off-the-shelf parts: Raspberry Pi, commodity LoRa radio, standard cables. There is no markup and no subscription anywhere in the stack: the design is free, the radio band is license-free, and your data lands somewhere you already own.`,
+    kicker: `Free and open-source`,
+    heading: `Designed for everyone, not just research labs.`,
+    body: `Mycelium is designed as a public good. The complete spec — parts list, firmware, software, assembly guides — is published, and you build a node from off-the-shelf parts.  There is no markup and no subscription anywhere in the stack: the design is free, the radio band is license-free, and your data lands somewhere you already own.`,
     caption: `Price it yourself — this list renders straight from the repo.`,
   },
 
@@ -93,7 +93,7 @@ Mycelium is an open-source, mesh telemetry network designed to make the (measuri
   reach: {
     kicker: `Reach.`,
     heading: `Built for the places cell towers never reached.`,
-    body: `The valleys, forests, and rangelands that need monitoring most are exactly where coverage ends — where the only commercial answer has been a satellite subscription. Mycelium's answer is the mesh itself: every node is designed to relay by default, so each sensor anyone deploys is meant to carry the network further. It's designed so that a node on the ridgeline brings the canyon behind it online — coverage compounding by addition, not infrastructure. (The real range gets published once it's field-tested; until then the picture below is schematic.)`,
+    body: `The valleys, forests, and rangelands that need monitoring most are exactly where coverage ends — where the only commercial answer has been a satellite subscription. Mycelium's answer is the mesh itself: every node relays by default, so each sensor anyone deploys extends the range of the mesh for everyone. Want to monitor water quality in a deep canyon without cell coverage? Each node you deploy extends the network farther up the canyon. No Wifi or other gateways nearby? I am working on a field gateway with a cellular or satellite connection. Instead of needing a data plan for each individual sensor, one data plan for the gateway connects the entire network to the internet, even in the most remote of locations. (I will publish the real range once it's field-tested; until then the picture below is schematic.)`,
   },
 
   // ── 6 · Encryption / privacy ────────────────────────────────────────

@@ -2,10 +2,13 @@
 /* D6 — cost over time. A commercial station's subscription keeps stacking
    year after year; a Mycelium node is its parts, once.
    Figures = verified C1 research (June 2026): HOBO RX3000 $1,049 + $110
-   temp sensor = $1,159 hardware, + ~$399/yr data plan. Mycelium bench
-   leaf ~$176, one-time. Naming a vendor on the live site pending Conor's
-   OK — swap "a commercial station" for the name then. */
-const HW = 1159, SUB = 399, NODE = 176, YEARS = 5;
+   temp sensor = $1,159 hardware, + ~$399/yr data plan. Mycelium FIELD node
+   ~$262–307 in parts (solar, weatherproof — the honest like-for-like vs a
+   deployed commercial station; see docs/bom.md). NODE is the midpoint, used
+   only to place the reference line; NODE_LABEL shows the range. Naming a
+   vendor on the live site pending Conor's OK. */
+const HW = 1159, SUB = 399, NODE = 285, YEARS = 5;
+const NODE_LABEL = "$262–307";
 const maxV = HW + SUB * YEARS;            // year-5 total
 const H = 250, TOP = 20, BASE = 250, LEFT = 70, RIGHT = 748;
 const innerH = BASE - TOP;
@@ -28,7 +31,7 @@ const bars = Array.from({ length: YEARS + 1 }, (_, yr) => {
 const nodeY = y(NODE);
 const fmt = (n) => "$" + n.toLocaleString("en-US");   // $1,159 etc.
 ---
-<figure class="d6" role="img" aria-label={`Chart: a commercial station costs about $${HW} in hardware plus about $${SUB} every year, stacking to roughly $${maxV} by year ${YEARS}, while a Mycelium node is about $${NODE} once.`}>
+<figure class="d6" role="img" aria-label={`Chart: a commercial station costs about $${HW} in hardware plus about $${SUB} every year, stacking to roughly $${maxV} by year ${YEARS}, while a Mycelium field node is ${NODE_LABEL} in parts, once.`}>
   <svg viewBox="0 0 760 290" class="d6-svg" aria-hidden="true">
     <!-- baseline -->
     <line x1={LEFT} y1={BASE} x2={RIGHT} y2={BASE} class="axis" />
@@ -46,14 +49,14 @@ const fmt = (n) => "$" + n.toLocaleString("en-US");   // $1,159 etc.
     ))}
     <!-- Mycelium flat reference -->
     <line x1={LEFT} y1={nodeY} x2={RIGHT} y2={nodeY} class="nodeline" />
-    <text x={RIGHT} y={nodeY - 7} class="nodelab">Mycelium node · {fmt(NODE)} · once</text>
+    <text x={RIGHT} y={nodeY - 7} class="nodelab">Mycelium field node · {NODE_LABEL} · once</text>
   </svg>
   <div class="d6-key mono">
     <span><i class="sw hw"></i>hardware</span>
     <span><i class="sw sub"></i>subscription, stacking</span>
-    <span><i class="sw node"></i>a Mycelium node, once</span>
+    <span><i class="sw node"></i>a Mycelium field node, once</span>
   </div>
-  <figcaption class="d6-cap mono">a commercial station runs ~{fmt(HW)} up front, then ~{fmt(SUB)} every year — about {fmt(maxV)} by year {YEARS}. A Mycelium node is ~{fmt(NODE)} in parts, once. <span class="dim">(prices as listed June 2026)</span></figcaption>
+  <figcaption class="d6-cap mono">a commercial station runs ~{fmt(HW)} up front, then ~{fmt(SUB)} every year — about {fmt(maxV)} by year {YEARS}. A Mycelium field node — solar, weatherproof — is {NODE_LABEL} in parts, once. <span class="dim">(prices as listed June 2026)</span></figcaption>
 </figure>
 
 <style>
