@@ -114,7 +114,7 @@ Mycelium approaches software reliability in a variety of ways.
 2. Destination or gateway outages buffer and drain automatically. If a node looses its connection, it stores and consolidates readings until the connection is reestablished. By transmitting multiple readings together after an outage, mycelium helps to avoid network overload. If the destination is down, gateways themselves can hold onto packets, preventing retransmission from the source node and the resulting network bandwidth drain.
 3. Nodes watch themselves — and recover from wedges, crashes, and even a radio knocked off the bus, on their own. Three watchdogs watch the system at separate layers (process → OS process-supervisor → silicon) and reboot if a process stalls, crashes, or enters infinite loop.
 4. Automatic notification of an offline node. If the destination script does not receive a reading for a specific amount of time (set to 3x the log rate but easily modifiable), it send an message to the provided email that the node has fallen silent.
-5. While the current node hardware design has a single logger, microcomputer, battery, and radio unit, the V2 node that is currently in the design phase has complete hardware redundancy. The idea is that even with the complete degradation of a hardware component, the nodes should be able to reroute any process around the degraded hardware and alert the destination address of the failure. This means hardware degradation turns into something you can deal with during routine maintenance rather then necessitating an emergency trip to the field. 
+5. 5. While the current node hardware design has a single logger, microcomputer, battery, and radio unit, the V2 node that is currently in the planning phase has complete hardware redundancy. The idea is that even with the physical degradation or destruction of a hardware component, the nodes should be able to reroute any process around the degraded hardware and alert the destination address of the failure. This means hardware degradation turns into something you can deal with during routine maintenance rather than necessitating an emergency trip to the field.
 `,
       `Features 1-4 have been verified by sabotaging the bench network with scripted failure drills:`,
     ],
@@ -140,7 +140,7 @@ Mycelium approaches software reliability in a variety of ways.
   roadmap: {
     kicker: `Where this is going.`,
     heading: `A bench-proven core, growing toward the field.`,
-    body: `The encrypted pipeline, the mesh, and the reliability layer all run end to end on the bench today. What comes next is making it survive real weather and easy enough that you never touch a terminal — built in the open, one honest milestone at a time. Two pieces are in active development right now.`,
+    body: `The encrypted pipeline, the mesh, the gateway software which translates LoRa to TCP/IP, and the reliability layer all run end to end on the bench today. What comes next is making it hardened enough survive real weather and easy enough that you never touch a terminal. Two pieces are in active development right now with two more in planning:`,
     items: [
       { label: `bench network running end to end`, state: `done` },
       { label: `field hardware testing`, state: `wip` },
@@ -156,8 +156,7 @@ Mycelium approaches software reliability in a variety of ways.
     kicker: `Knowing shouldn't be a luxury.`,
     heading: `Protecting anything starts with knowing what's happening to it.`,
     body: [
-      `And for most of the living world, nobody is measuring. Mycelium exists to make the measuring cheap, trustworthy, and unowned, so the small places get watched too.`,
-      `It's named for the network under the forest floor: invisible infrastructure that connects living things, moves what's needed to where it's needed, and belongs to no one in particular.`,
+      `And for most of the living world, nobody is measuring. Mycelium exists to make the measuring cheap, easy, and reliable, so we can help protect our world before it disapears. `,
     ],
     storyLink: `the story behind Mycelium →`,
   },
