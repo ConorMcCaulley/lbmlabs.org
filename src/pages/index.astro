@@ -130,7 +130,7 @@ TOTAL .......................... <span class="ok">~$262–307</span></div>
     <div class="wrap narrow">
       <p class="kicker">{t.reliability.kicker}</p>
       <h2>{t.reliability.heading}</h2>
-      {t.reliability.body.map((para) => <p>{para}</p>)}
+      {t.reliability.body.map((para) => <p class="rel-body">{para}</p>)}
       <div class="badges">
         {t.reliability.badges.map((b) => <span class="badge">{b}</span>)}
       </div>
@@ -245,6 +245,10 @@ DRILL PASS</div>
 
   /* lead paragraph under an h2 */
   .section-lead { font-size: clamp(1.05rem, 1.5vw, 1.2rem); color: var(--text-dim); max-width: 60ch; margin-top: var(--s-3); }
+
+  /* reliability body: honour the line breaks in the copy so the numbered
+     1–5 list renders as separate lines, not one run-on paragraph */
+  .rel-body { white-space: pre-line; }
 
   /* §3 three-up */
   .threeup { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5); margin: var(--s-5) 0; }
