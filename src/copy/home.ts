@@ -31,7 +31,7 @@ export const home = {
     kicker: `LBM Labs — open, public-good infrastructure for understanding the natural world.`,
     heading: `The network for the Earth.`,
     sub: `Our biosphere is changing faster than ever, but good field data is often challenging and expensive to collect. Part of that challenge is the price and complexity of existing telemetry systems that rely on satellite or cellular backhaul.
-Mycelium is an open-source, mesh telemetry network designed to make the (measuring the world around us) (adding telemetry to your existing sensors) cheap, easy, and reliable. `,
+Mycelium is an open-source, LorRa mesh telemetry network designed to make the (measuring the world around us) (adding telemetry to your existing sensors) cheap, easy, and reliable. `,
     // sample telemetry line along the bottom edge (3 parts; middle is green)
     statusPre: `leaf01 · last reading 3 min ago · temp_c 18.4 ·`,
     statusOk: `0 readings lost since deploy`,
@@ -52,7 +52,7 @@ Mycelium is an open-source, mesh telemetry network designed to make the (measuri
     heading: `Getting data out of the field is expensive.`,
     body: [
       `Existing telemetry systems are costly. Hardware runs from $1,000 to over $5,000 dollars per unit, plus ongoing data costs which can be as high as $600 dollars per year. DIY solutions do exist, but are often more challenging to stand up and still require traditional cellular or satellite data plans. Many of the people closest to the land — watershed groups, small farms, tribes, researchers, teachers — are unable to use the existing option because of cost and technical roadblocks. `,
-      `Mycelium is designed to make it easier, cheaper, and more reliable to telemeter sensors in the field. It uses low cost, open-source hardware than you can build easily from off the shelf parts and a fully open and free software stack. While it currently suffers from some of the same issues as other DIY telemetry solutions (namely needing some technical knowledge to understand and set up the hardware), I am working hard to build a no-terminal setup app that will streamline the entire process enough to allow anyone to stand up a node in a few minutes. `,
+      `Mycelium is designed to make it easier, cheaper, and more reliable to telemeter sensors in the field. It uses low cost, open-source hardware than you can build easily from off the shelf parts and a fully open and free software stack. While it currently suffers from some of the same issues as other DIY telemetry solutions (namely needing some technical knowledge to understand and set up the hardware), the next release will include a no-terminal setup app to streamline the entire process enough. The goal is to make it simple enough to allow anyone to stand up a node in a few minutes with no technical knowlege. `,
     ],
     // NOTE: caption is stashed — not shown on the page right now (the satellite
     // visual it described was removed 2026-06-15). Kept here for when/if it returns.
@@ -67,7 +67,7 @@ Mycelium is an open-source, mesh telemetry network designed to make the (measuri
     cards: [
       {
         title: `Sense`,
-        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. (I am activly working on integretion for I^2C, SPI, and OneWire sensors) Readings are encrypted with AES-256-GCM the moment they're taken.`,
+        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. (I am activly working on integretion for I^2C, SPI, and OneWire sensors). The hardware generates 12v boost to power external sondes (up to ~100 mA). Readings are encrypted with AES-256-GCM the moment they're taken.`,
       },
       {
         title: `Mesh`,
@@ -100,16 +100,23 @@ Mycelium is an open-source, mesh telemetry network designed to make the (measuri
   privacy: {
     kicker: `Your data stays yours.`,
     heading: `The relays can't read what they carry.`,
-    body: `Every reading is encrypted on the sensor node and decrypted only at its owner's destination — the mesh in between, including whoever runs the gateway, sees ciphertext and a delivery address. That's not a policy; it's the architecture. Strangers' networks can strengthen each other without sharing anything but radio waves.`,
+    body: `Every reading is encrypted with AES-256-GCM on the sensor node and decrypted only at its owner's destination. Every other node in the mesh sees only the final address and cypiertext. This allows nodes deployed by disparate teams and individuals to reenforce each other without sharing anything but radio waves.`,
   },
 
   // ── 7 · Reliability (the drill output block lives in index.astro) ───
   reliability: {
     kicker: `Built like infrastructure, not a gadget.`,
-    heading: `Reliability and survivability are the core of the Mycelium architecture.`,
+    heading: `Reliability and survivability are at the core of the Mycelium architecture.`,
     body: [
-      `Every reading is committed to disk the moment it's taken and deleted only after its destination cryptographically confirms receipt. Outages buffer and drain. Nodes watch themselves — and recover from wedges, crashes, and even a radio knocked off the bus, on their own.`,
-      `This is verified by sabotaging the bench network with scripted failure drills:`,
+      `Breakdowns in the field are expensive. They often necessitate a technician physically going out to the station to reset it which is especially problematic if your nodes are in hard to reach locations (on mountaintops, buoys, etc.). While hardware problems are to some extent inevitable, starting with field reliability as the basis for each desision in the software stack can help make field deployments more reliable and thus cheaper. 
+Mycelium approaches software reliability in a variety of ways. 
+1. Every reading is committed to disk the moment it's taken and deleted only after its destination cryptographically confirms receipt. 
+2. Destination or gateway outages buffer and drain automatically. If a node looses its connection, it stores and consolidates readings until the connection is reestablished. By transmitting multiple readings together after an outage, mycelium helps to avoid network overload. If the destination is down, gateways themselves can hold onto packets, preventing retransmission from the source node and the resulting network bandwidth drain.
+3. Nodes watch themselves — and recover from wedges, crashes, and even a radio knocked off the bus, on their own. Three watchdogs watch the system at separate layers (process → OS process-supervisor → silicon) and reboot if a process stalls, crashes, or enters infinite loop.
+4. Automatic notification of an offline node. If the destination script does not receive a reading for a specific amount of time (set to 3x the log rate but easily modifiable), it send an message to the provided email that the node has fallen silent.
+5. While the current node hardware design has a single logger, microcomputer, battery, and radio unit, the V2 node that is currently in the design phase has complete hardware redundancy. The idea is that even with the complete degradation of a hardware component, the nodes should be able to reroute any process around the degraded hardware and alert the destination address of the failure. This means hardware degradation turns into something you can deal with during routine maintenance rather then necessitating an emergency trip to the field. 
+`,
+      `Features 1-4 have been verified by sabotaging the bench network with scripted failure drills:`,
     ],
     badges: [
       `gateway outage ✓`,
