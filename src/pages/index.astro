@@ -145,22 +145,8 @@ DRILL PASS</div>
     </div>
   </section>
 
-  <!-- ── 8 · Open by default (light) ─────────────────────────────── -->
+  <!-- ── 8 · Roadmap (light) ─────────────────────────────────────── -->
   <section data-theme="paper">
-    <div class="wrap narrow">
-      <p class="kicker">{t.open.kicker}</p>
-      <h2>{t.open.heading}</h2>
-      <p>{t.open.body}</p>
-      <div class="evidence" role="img" aria-label="Terminal: 168 tests passed">
-<span class="lbl">$ pytest</span>........................................................
-<span class="ok">168 passed</span> in 0.33s</div>
-      <p class="links small mono"><a href={repo}>Repo&nbsp;↗</a> · <a href={`${base}/build`}>Build guide</a> · <a href={repo}>Roadmap</a></p>
-      <p class="dim small">Apache-2.0 (code) · CC BY 4.0 (docs &amp; hardware)</p>
-    </div>
-  </section>
-
-  <!-- ── 9 · Roadmap (dark) ──────────────────────────────────────── -->
-  <section>
     <div class="wrap narrow">
       <p class="kicker">{t.roadmap.kicker}</p>
       <h2>{t.roadmap.heading}</h2>
@@ -178,7 +164,7 @@ DRILL PASS</div>
     </div>
   </section>
 
-  <!-- ── 10 · Mission (dark) ─────────────────────────────────────── -->
+  <!-- ── 9 · Mission (dark) ──────────────────────────────────────── -->
   <section class="mission">
     <div class="wrap narrow">
       <p class="kicker">{t.mission.kicker}</p>
@@ -267,10 +253,15 @@ DRILL PASS</div>
   /* §9 roadmap */
   .roadmap { list-style: none; padding: 0; margin: var(--s-5) 0 var(--s-3); display: flex; flex-wrap: wrap; gap: var(--s-3); }
   .roadmap li { border: 1px solid var(--rule); border-radius: var(--r-pill); padding: 8px 14px; color: var(--text-dim); font-size: var(--t-small); }
-  .roadmap li.done { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-  .roadmap li.wip { color: var(--ink); border-color: color-mix(in srgb, var(--amber) 50%, transparent); }
+  .roadmap li.done { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  .roadmap li.wip { color: var(--text); border-color: color-mix(in srgb, var(--amber) 50%, transparent); }
   .roadmap .ok { color: var(--accent); }
   .roadmap .amber { color: var(--amber); }
+  /* on the light section the bright accent/amber need darker, readable variants */
+  [data-theme="paper"] .roadmap li.done { border-color: color-mix(in srgb, var(--accent-deep) 50%, transparent); }
+  [data-theme="paper"] .roadmap li.wip { border-color: color-mix(in srgb, var(--amber) 80%, var(--ink-dark)); }
+  [data-theme="paper"] .roadmap .ok { color: var(--accent-deep); }
+  [data-theme="paper"] .roadmap .amber { color: color-mix(in srgb, var(--amber) 55%, var(--ink-dark)); }
 
   /* mission + footer */
   .mission .ctas { align-items: center; }
