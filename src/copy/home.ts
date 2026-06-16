@@ -30,7 +30,7 @@ export const home = {
   hero: {
     kicker: `LBM Labs — open, public-good infrastructure for understanding the natural world.`,
     heading: `The network for the Earth.`,
-    sub: `Our biosphere is changing faster than ever, but good field data is often challenging and expensive to collect. Part of that challenge is the price and complexity of existing telemetry systems that rely on satellite or cellular backhaul.
+    sub: `Our biosphere is changing faster than ever, but data from the field is often challenging and expensive to collect. Part of that challenge is the price and complexity of existing telemetry systems that rely on satellite or cellular backhaul.
 Mycelium is an open-source, LoRa mesh telemetry network designed to make measuring the world around us — and adding telemetry to your existing sensors — cheap, easy, and reliable. `,
     // sample telemetry line along the bottom edge (3 parts; middle is green)
     statusPre: `leaf01 · last reading 3 min ago · temp_c 18.4 ·`,
