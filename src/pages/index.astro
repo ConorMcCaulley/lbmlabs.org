@@ -153,10 +153,11 @@ DRILL PASS</div>
       <p>{t.roadmap.body}</p>
       <ol class="roadmap mono">
         {t.roadmap.items.map((it) => (
-          <li class={it.state === "done" ? "done" : it.state === "wip" ? "wip" : undefined}>
+          <li class={it.state === "done" ? "done" : it.state === "wip" ? "wip" : "plan"}>
             {it.label}
             {it.state === "done" && <span class="ok"> ✓</span>}
             {it.state === "wip" && <span class="amber">{" ◐ in progress"}</span>}
+            {it.state === "todo" && <span class="planmark">{" ○ in planning"}</span>}
           </li>
         ))}
       </ol>
@@ -255,8 +256,10 @@ DRILL PASS</div>
   .roadmap li { border: 1px solid var(--rule); border-radius: var(--r-pill); padding: 8px 14px; color: var(--text-dim); font-size: var(--t-small); }
   .roadmap li.done { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
   .roadmap li.wip { color: var(--text); border-color: color-mix(in srgb, var(--amber) 50%, transparent); }
+  .roadmap li.plan { border-style: dashed; }   /* planned/tentative — dashed vs solid for active items */
   .roadmap .ok { color: var(--accent); }
   .roadmap .amber { color: var(--amber); }
+  .roadmap .planmark { color: var(--text-dim); }
   /* on the light section the bright accent/amber need darker, readable variants */
   [data-theme="paper"] .roadmap li.done { border-color: color-mix(in srgb, var(--accent-deep) 50%, transparent); }
   [data-theme="paper"] .roadmap li.wip { border-color: color-mix(in srgb, var(--amber) 80%, var(--ink-dark)); }
