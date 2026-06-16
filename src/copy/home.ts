@@ -146,6 +146,7 @@ Mycelium approaches software reliability in a variety of ways.
       { label: `field hardware testing`, state: `wip` },
       { label: `zero-terminal setup app`, state: `wip` },
       { label: `fleet dashboards`, state: `todo` },
+      { label: `fully redundant hardware (v2)`, state: `todo` },
     ],
     caption: `All of it public, all of it free.`,
   },
