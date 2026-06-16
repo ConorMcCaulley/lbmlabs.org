@@ -143,16 +143,16 @@
 
 <details class="panel" open>
   <summary>tune the organism · <span class="fps" id="fps">– fps</span> · <span class="gw" id="gwc">1 gw</span></summary>
-  <label>growth speed <span class="val" id="vSpeed"></span><input type="range" id="pSpeed" min="6" max="60" value="36"></label>
-  <label>branchiness <span class="val" id="vBranch"></span><input type="range" id="pBranch" min="5" max="70" value="34"></label>
-  <label>density cap <span class="val" id="vCap"></span><input type="range" id="pCap" min="120" max="900" value="374"></label>
-  <label>radio range <span class="val" id="vRange"></span><input type="range" id="pRange" min="70" max="220" value="118"></label>
-  <label>read chance <span class="val" id="vRead"></span><input type="range" id="pRead" min="0" max="100" value="33"></label>
-  <label>pulse speed <span class="val" id="vSpd"></span><input type="range" id="pSpd" min="50" max="380" value="165"></label>
-  <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="21"></label>
-  <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="15"></label>
-  <label>wander <span class="val" id="vWander"></span><input type="range" id="pWander" min="0" max="150" value="55"></label>
-  <label>texture <span class="val" id="vTexture"></span><input type="range" id="pTexture" min="5" max="120" value="50"></label>
+  <label>growth speed <span class="val" id="vSpeed"></span><input type="range" id="pSpeed" min="6" max="60" value="41"></label>
+  <label>branchiness <span class="val" id="vBranch"></span><input type="range" id="pBranch" min="5" max="70" value="47"></label>
+  <label>density cap <span class="val" id="vCap"></span><input type="range" id="pCap" min="120" max="900" value="617"></label>
+  <label>radio range <span class="val" id="vRange"></span><input type="range" id="pRange" min="70" max="220" value="103"></label>
+  <label>read chance <span class="val" id="vRead"></span><input type="range" id="pRead" min="0" max="100" value="26"></label>
+  <label>pulse speed <span class="val" id="vSpd"></span><input type="range" id="pSpd" min="50" max="380" value="104"></label>
+  <label>cursor pull <span class="val" id="vPull"></span><input type="range" id="pPull" min="0" max="100" value="3"></label>
+  <label>glow <span class="val" id="vGlow"></span><input type="range" id="pGlow" min="10" max="100" value="10"></label>
+  <label>wander <span class="val" id="vWander"></span><input type="range" id="pWander" min="0" max="150" value="2"></label>
+  <label>texture <span class="val" id="vTexture"></span><input type="range" id="pTexture" min="5" max="120" value="40"></label>
   <div class="row">
     <button id="bKill" title="or click any node directly">kill a node</button>
     <button id="bReset">reset</button>
@@ -214,23 +214,24 @@ const HOT = { r: 224, g: 255, b: 238 };      // gateway core (hot white-green)
 const DPR_CAP = 1.5;                         // CPU budget: cap pixel density
 
 // ── tunables (bound to the review panel) ──────────────────────────
-// Defaults = Conor's tuning session (June 2026): faster, sparser,
-// much subtler glow, gentler cursor pull — the organism as ambience,
-// not spectacle. These are the production hero's starting values.
+// Defaults = Conor's tuning session (June 2026): denser + branchier, a
+// shorter radio range, very subtle glow, near-zero wander and cursor pull
+// — the organism as ambience, not spectacle. These mirror the slider
+// value="" attributes (which override these on load) — keep them in sync.
 const P = {
-  tipSpeed: 36,        // px/sec a growing tip advances
-  branchPct: 34,       // % chance to branch at each new node
-  nodeCap: 374,        // stop growing past this many (non-gateway) nodes
-  range: 118,          // px radio range — who can hear whom
+  tipSpeed: 41,        // px/sec a growing tip advances
+  branchPct: 47,       // % chance to branch at each new node
+  nodeCap: 617,        // stop growing past this many (non-gateway) nodes
+  range: 103,          // px radio range — who can hear whom
   signalPenalty: 2.2,  // extra route-cost for a hop at the very edge of range
   signalExp: 6,        // how sharply that penalty ramps up near max range
   brushRadius: 18,     // px: if a link would skim this close to another node, connect to it
   fuseExtraHops: 3,    // ...but only if that detour adds at most this many hops
   readEverySec: 4,     // synchronized read cycle — every node rolls together
-  readChance: 0.33,    // ...with this probability each cycle (~1 in 3)
-  pulseSpeed: 165,     // px/sec a reading travels along its link
-  cursorPull: 0.21,    // 0..1 nutrient attraction strength
-  glow: 0.15,          // link brightness
+  readChance: 0.26,    // ...with this probability each cycle (~1 in 4)
+  pulseSpeed: 104,     // px/sec a reading travels along its link
+  cursorPull: 0.03,    // 0..1 nutrient attraction strength
+  glow: 0.10,          // link brightness
   mergeRadius: 14,     // px: don't bud a node this close to an existing one
   budRadius: 82,       // px: a node buds a new node within this radius of itself
   budFullDensity: 6,   // neighbours within budRadius at which a node stops budding
@@ -247,8 +248,8 @@ const P = {
   migrateDelayMin: 0.35, migrateDelayMax: 1.4,  // stagger before migrating to a newly-better route
 
   linkGrowSpeed: 130,  // px/sec a connection strand reaches toward its target
-  linkWander: 0.55,    // how hard the soil-density field deflects the path
-  soilScale: 0.05,     // spatial frequency of the "soil" field (1/px) — smaller = longer waves
+  linkWander: 0.02,    // how hard the soil-density field deflects the path
+  soilScale: 0.04,     // spatial frequency of the "soil" field (1/px) — smaller = longer waves
   linkTurnCap: 0.05,   // clamp on the per-step soil deflection
   linkHoming: 1.7,     // pull toward target — keeps the reach near-straight overall
 };
