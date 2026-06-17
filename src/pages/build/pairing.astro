@@ -7,7 +7,7 @@ import SiteFooter from "../../components/SiteFooter.astro";
    This is where the whole path completes and the reliability story is
    proven. Voice It/I; bench, not field. */
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-const repo = "#"; // A7
+const repo = "https://github.com/LBM-Labs/Mycelium_Network"; // A7
 const steps = [
   { h: "Grab the gateway's identity hash", b: "On the gateway, <code>journalctl -u egress-gateway</code> prints its <strong>identity hash</strong> at startup. Copy it — it's the gateway's cryptographic address, and the one thing the leaf needs to trust it." },
   { h: "Tell the leaf to trust it", b: "On the leaf, set <code>gateway_identity_hash</code> in <code>/etc/mycelium-network-leaf/config.toml</code> to that hash, then <code>sudo systemctl restart leaf-node</code>. That's the whole pairing — one config value." },

@@ -31,7 +31,7 @@ export const home = {
     kicker: `LBM Labs — open, public-good infrastructure for understanding the natural world.`,
     heading: `The network for the Earth.`,
     sub: `Our biosphere is changing faster than ever, but data from the field is often challenging and expensive to collect. Part of that challenge is the price and complexity of existing telemetry systems that rely on satellite or cellular backhaul.
-Mycelium is an open-source, LoRa mesh telemetry network designed to make measuring the world around us — and adding telemetry to your existing sensors — cheap, easy, and reliable. `,
+Mycelium is an open-source, LoRa mesh telemetry network designed to make adding telemetry to your environmental sensors cheap, easy, and reliable. `,
     // sample telemetry line along the bottom edge (3 parts; middle is green)
     statusPre: `leaf01 · last reading 3 min ago · temp_c 18.4 ·`,
     statusOk: `0 readings lost since deploy`,
@@ -67,7 +67,7 @@ Mycelium is an open-source, LoRa mesh telemetry network designed to make measuri
     cards: [
       {
         title: `Sense`,
-        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. (I am actively working on integration for I²C, SPI, and OneWire sensors.) The hardware generates a 12 V boost to power external sondes (up to ~100 mA). Readings are encrypted with AES-256-GCM the moment they're taken.`,
+        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. (integration for I²C, SPI, and OneWire sensors are in development) The hardware generates a 12 V boost to power external sondes (up to ~100 mA). Readings are encrypted with AES-256-GCM the moment they're taken.`,
       },
       {
         title: `Mesh`,
@@ -85,7 +85,7 @@ Mycelium is an open-source, LoRa mesh telemetry network designed to make measuri
   free: {
     kicker: `Free and open-source`,
     heading: `Designed for everyone, not just research labs.`,
-    body: `Mycelium is designed as a public good. The complete spec — parts list, firmware, software, assembly guides — is published, and you build a node from off-the-shelf parts. There is no markup and no subscription anywhere in the stack: the design is free, the radio band is license-free, and your data lands somewhere you already own.`,
+    body: `Mycelium is designed as a public good. Parts lists, firmware, software, and assembly guides are all open source, and you build a node from off-the-shelf parts. The design is free, the radio band is license-free, and your data lands somewhere you already own.`,
     caption: `Price it yourself — this list renders straight from the repo.`,
   },
 

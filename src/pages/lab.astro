@@ -2,55 +2,22 @@
 import Base from "../layouts/Base.astro";
 import SiteNav from "../components/SiteNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-/* /lab (B5). LBM Labs in five sentences — deliberately the shortest page;
-   brevity is the brand statement. Locked copy-lab.md with the June 2026
-   brand change (no "nothing for sale"; "at cost" / "no markup"). */
+/* TEMPORARY under-construction placeholder. The full /lab page (the LBM
+   Labs bio etc.) is preserved in git history — restore it with:
+   git checkout <prior-commit> -- src/pages/lab.astro */
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-const repo = "#"; // A7
+const repo = "https://github.com/LBM-Labs/Mycelium_Network";
 ---
-<Base title="LBM Labs — open public-good infrastructure" description="LBM Labs builds open, public-good infrastructure for understanding the natural world, and gives the designs away. Flagship: the Mycelium telemetry mesh.">
+<Base title="Lab — coming soon · LBM Labs" description="This page is under construction.">
   <SiteNav current="lab" />
 
-  <main class="lab" id="main">
+  <main class="uc" id="main">
     <div class="wrap narrow">
-      <p class="kicker">Lab.</p>
-      <h1>LBM&nbsp;Labs</h1>
-      <p class="statement">LBM Labs builds open, public-good infrastructure for
-      understanding the natural world — and gives the designs away. There's no
-      markup and no subscription: the design is free, and any hardware it offers
-      is sold at cost, because tools for protecting the commons should belong to
-      it. Everything the lab produces is published complete: hardware designs,
-      firmware, software, documentation, and the roadmap, under licenses that let
-      you use it, change it, and build on it (Apache-2.0 for code, CC BY 4.0 for
-      docs and hardware). The flagship project is <strong>Mycelium</strong>, a
-      free, open, encrypted environmental telemetry mesh — the best way to
-      understand the lab is to <a href={`${base}/why`}>read why I built it</a>
-      or just <a href={`${base}/build`}>build a node</a>. More projects will
-      appear here as they earn the space.</p>
-
-      <p class="solo dim">LBM Labs is one person right now — plus whoever shows up in the issues.</p>
-
-      <h2>Who's behind it</h2>
-      <div class="bio">
-        <p>That person is <strong>Conor McCaulley</strong>. I live in Berkeley,
-        near the creeks I grew up on, and I've spent most of my life drawn to the
-        overlooked corners of the natural world — the urban creek under the BART
-        tracks, the vacant-lot garden, the stretch of marsh nobody's measuring.</p>
-        <p>I tend to deal with that by building things. I designed my own degree
-        at UCLA around where technology meets the environment, and I've kept going
-        since — a water-quality rig for my aquaponics system, and now Mycelium.
-        The throughline never changes: I want to actually know what's happening to
-        these places instead of guessing, and I'd like everyone who loves a small,
-        overlooked place to be able to know it too.</p>
-      </div>
-
-      <h2>Get in touch</h2>
-      <ul class="contact">
-        <li><span class="ck mono">Email</span> <a href="mailto:conormccaulley@gmail.com">conormccaulley@gmail.com</a></li>
-        <li><span class="ck mono">GitHub</span> <a href={repo}>the repo&nbsp;↗</a> — the work happens in the open; watch it, file issues, send patches.</li>
-      </ul>
-      <p class="aside dim small">No newsletter, no socials to follow, no analytics
-      on this site. If the work is good, the repo history will say so.</p>
+      <p class="kicker">Coming soon</p>
+      <h1>This area is under construction.</h1>
+      <p class="lede">This page isn't ready yet. In the meantime, you can
+      <a href={`${base}/build`}>build a node</a> or
+      <a href={repo}>read the code&nbsp;↗</a>.</p>
     </div>
   </main>
 
@@ -58,19 +25,8 @@ const repo = "#"; // A7
 </Base>
 
 <style>
-  .lab { padding: var(--s-9) 8vw var(--s-8); min-height: 60vh; }
-  .lab h1 { font-size: clamp(2.6rem, 7vw, 4.6rem); margin-bottom: var(--s-5); }
-  .statement { font-size: clamp(1.1rem, 1.7vw, 1.35rem); line-height: 1.7; max-width: 60ch; color: var(--ink); }
-  .statement strong { color: var(--accent); }
-  .statement a { color: var(--accent); }
-  .solo { margin-top: var(--s-4); font-size: var(--t-small); max-width: 56ch; }
-  .lab h2 { margin-top: var(--s-7); font-size: var(--t-h3); }
-  .bio p { font-size: var(--t-body); line-height: 1.7; max-width: 64ch; color: var(--ink); }
-  .bio strong { color: var(--accent); }
-  .bio em { font-style: italic; color: var(--ink); }
-  .contact { list-style: none; padding: 0; margin: var(--s-4) 0; display: grid; gap: var(--s-3); }
-  .contact li { color: var(--dim); }
-  .contact .ck { display: inline-block; min-width: 5rem; color: var(--accent); font-size: var(--t-small); }
-  .contact a { color: var(--ink); }
-  .aside { margin-top: var(--s-5); max-width: 56ch; }
+  .uc { display: flex; align-items: center; min-height: 66vh; padding: var(--s-8) 8vw; }
+  .uc h1 { margin: var(--s-3) 0 var(--s-4); }
+  .uc .lede { font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--dim); max-width: 50ch; }
+  .uc a { color: var(--accent); }
 </style>

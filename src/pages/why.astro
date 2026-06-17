@@ -2,163 +2,31 @@
 import Base from "../layouts/Base.astro";
 import SiteNav from "../components/SiteNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-/* /why (B3/B4). Mission-first essay with the Codornices creek story in
-   the back half (on paper, set apart). Locked copy-why.md; claims-clean
-   (Wildcat Creek explicitly hypothetical, $5,000 personal, Reticulum
-   credited). Photo slot = C4 (the real first two nodes). Awaits Conor's
-   B6 voice pass + the personal origin sign-off (received). */
+/* TEMPORARY under-construction placeholder. The full /why essay (creek
+   story etc.) is preserved in git history — restore it with:
+   git checkout <prior-commit> -- src/pages/why.astro */
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-const repo = "#"; // A7
+const repo = "https://github.com/LBM-Labs/Mycelium_Network";
 ---
-<Base title="Why I'm building Mycelium" description="Good ground truth is priced like a luxury, so the small places decline in the dark. Why I'm building Mycelium: free, open telemetry so they get watched too.">
+<Base title="Why — coming soon · LBM Labs" description="This page is under construction.">
   <SiteNav current="why" />
 
-  <header class="page-head" id="main">
+  <main class="uc" id="main">
     <div class="wrap narrow">
-      <p class="kicker">Why.</p>
-      <h1>Why I'm building Mycelium.</h1>
+      <p class="kicker">Coming soon</p>
+      <h1>This area is under construction.</h1>
+      <p class="lede">This page isn't ready yet. In the meantime, you can
+      <a href={`${base}/build`}>build a node</a> or
+      <a href={repo}>read the code&nbsp;↗</a>.</p>
     </div>
-  </header>
-
-  <section class="essay">
-    <div class="wrap narrow">
-      <h2>The world is changing faster than we're measuring it.</h2>
-      <p>Ask a simple question about almost any small piece of the natural world
-      — is this creek warming? when did the oxygen drop? what did last summer
-      actually do to this meadow? — and the honest answer is usually: nobody
-      knows. Not because nobody cares, but because nobody was measuring.</p>
-      <p>Continuous environmental monitoring exists, and it works. It's also
-      priced like laboratory equipment: a single commercial telemetry station
-      runs thousands of dollars before the cellular or satellite subscription
-      starts, and the data often lands in a platform you rent rather than own.
-      At those prices, monitoring goes where grants and mandates send it — a few
-      important rivers, a few flagship reserves — and the rest of the living
-      world goes unwatched. Satellites fill in some of the picture, but they see
-      broad, not deep: a satellite can tell you a region is drying; it cannot
-      tell you what happened in the pool below the culvert on Tuesday night.</p>
-      <p>The places that get degraded first are exactly the places too small,
-      too local, too unglamorous to monitor. They decline in the dark.</p>
-
-      <h2>What I'm doing about it.</h2>
-      <p>Mycelium is a free and open environmental telemetry mesh, the flagship
-      project of LBM Labs. The complete design is published: hardware parts list,
-      firmware, software, assembly guides. You build a node from a few hundred
-      dollars of off-the-shelf parts, and your readings land in a spreadsheet or
-      endpoint you own, with no subscription anywhere in the stack.</p>
-      <p>Three design decisions carry most of the weight:</p>
-      <p><strong>Every node is a relay.</strong> Nodes find each other
-      automatically over license-free LoRa radio and carry each other's traffic,
-      so coverage compounds: each sensor anyone deploys also extends the network
-      for everyone behind it. That's how readings are meant to get out of the
-      valleys and canyons where cellular has never reached and satellite uplinks
-      were previously the only option. As a hypothetical: to monitor water
-      temperature along the East Bay's Wildcat Creek, a single gateway with WiFi
-      at the Tilden visitor center could connect a chain of nodes running up the
-      watershed — much of it without cell coverage — at zero ongoing cost.</p>
-      <p><strong>Nobody has to trust anybody.</strong> Every reading is encrypted
-      end to end on the sensor node and decrypted only at its owner's
-      destination. Relays and gateways carry ciphertext they cannot read — so
-      strangers' networks can strengthen each other without sharing anything but
-      radio waves.</p>
-      <p><strong>It assumes it will be neglected.</strong> Field telemetry fails
-      in boring ways: power cuts, wedged software, dead radios, silent months.
-      Every reading is committed to durable storage the moment it's taken and
-      deleted only after its destination cryptographically confirms receipt;
-      nodes watchdog themselves back to life; and the failure drills that prove
-      this ship with the code, so you can re-run the evidence instead of taking
-      my word for it.</p>
-      <p>The network stack underneath is <a href="https://reticulum.network">Reticulum&nbsp;↗</a>,
-      Mark Qvist's phenomenal open mesh networking project — Mycelium exists in
-      large part because his work made it imaginable.</p>
-    </div>
-  </section>
-
-  <section class="creek" data-theme="paper">
-    <div class="wrap narrow">
-      <h2>The creek this started with.</h2>
-      <p>Growing up in west Berkeley, one of my favorite places was the 150 feet
-      or so of Codornices Creek daylighted along the Ohlone Greenway near Gilman
-      Street. It is far from wild — it runs under the BART tracks and into
-      concrete tunnels at both ends. But on warm days after preschool my
-      godfather would take me there to "fish" with a piece of string and a bent
-      nail baited with cheese. I never caught anything. I remember trout nibbling
-      at the cheese while crayfish picked along the bottom and hid in the undercut
-      banks, and I remember that this scrap of urban nature felt magical.</p>
-
-      <figure class="photo-slot" aria-hidden="true">
-        <span class="ph-lbl mono">photo</span>
-        <span class="ph-desc">the real first two nodes — a leaf and a gateway</span>
-      </figure>
-
-      <p>The trout are gone now. Plastic bags drift where they used to hold. The
-      occasional crayfish still works the bottom, looking less like a member of an
-      ecosystem than a survivor of one. The same quiet degradation is repeating
-      the world over, in uncountable small fragments of nature exactly like this
-      one.</p>
-      <p>Here is the part that bothers me most, despite living nearby my whole life:</p>
-      <blockquote class="thesis">I could not tell you when it happened.</blockquote>
-      <p>Warmer water or a diesel spill; a decade or a single bad weekend — I
-      don't know, because nobody was measuring. And nobody was ever going to spend
-      $5,000 on a telemetered data logger for 150 feet of urban creek.</p>
-      <p>Mycelium is the tool I wished existed: telemetry cheap enough, reliable
-      enough, and simple enough that places like this get watched too.</p>
-      <p class="close"><em>I'd like to know what's happening to my creek while the
-      crayfish are still there to ask about.</em></p>
-    </div>
-  </section>
-
-  <section class="stands">
-    <div class="wrap narrow">
-      <h2>Where it stands, honestly.</h2>
-      <p>Mycelium is young. A complete network — sensor node, mesh, gateway,
-      encrypted pipeline to a spreadsheet — runs end to end on the bench today,
-      with its reliability layer tested by scripted failure drills against the
-      live system. Field hardware (solar power, enclosures, real-world radio
-      range) is still being proven, and I won't publish performance claims until
-      it has been. The roadmap, like everything else, is public.</p>
-      <p>If you're an academic, a watershed group, an agency, a teacher, or just
-      someone with a creek — I'm building this for you, and it will never cost
-      more than the parts.</p>
-      <p class="dim">The story of what happens next is partly yours to write.</p>
-      <div class="ctas">
-        <a class="btn-primary" href={`${base}/build`}>Build one</a>
-        <a class="btn-ghost" href={repo}>Read the code</a>
-      </div>
-    </div>
-  </section>
+  </main>
 
   <SiteFooter />
 </Base>
 
 <style>
-  .page-head { padding: var(--s-9) 8vw var(--s-4); }
-  .essay, .creek, .stands { padding-block: var(--s-7); }
-  .essay p, .creek p, .stands p { font-size: var(--t-body); line-height: 1.7; max-width: 64ch; }
-  .essay h2, .creek h2, .stands h2 { margin-top: var(--s-7); }
-  .essay h2:first-child { margin-top: 0; }
-  .essay strong { color: var(--accent); }
-  [data-theme="paper"] .essay strong { color: var(--accent-deep); }
-
-  .thesis {
-    font-family: var(--font-display);
-    font-weight: 650;
-    font-size: clamp(1.6rem, 3.4vw, 2.4rem);
-    line-height: 1.15;
-    letter-spacing: -0.015em;
-    color: var(--ink-dark);
-    margin: var(--s-6) 0;
-    padding-left: var(--s-5);
-    border-left: 3px solid var(--accent-deep);
-    max-width: 20ch;
-  }
-  .creek .close { color: var(--dim-dark); }
-  .creek .photo-slot {
-    aspect-ratio: 16 / 9; margin: var(--s-6) 0; border: 1px dashed color-mix(in srgb, var(--accent-deep) 35%, transparent);
-    border-radius: var(--r-sm); display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: var(--s-2); text-align: center;
-    background: color-mix(in srgb, var(--accent-deep) 4%, transparent);
-  }
-  .creek .ph-lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-deep); }
-  .creek .ph-desc { font-size: var(--t-small); color: var(--dim-dark); }
-  .stands .ctas { margin-top: var(--s-5); }
+  .uc { display: flex; align-items: center; min-height: 66vh; padding: var(--s-8) 8vw; }
+  .uc h1 { margin: var(--s-3) 0 var(--s-4); }
+  .uc .lede { font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--dim); max-width: 50ch; }
+  .uc a { color: var(--accent); }
 </style>
