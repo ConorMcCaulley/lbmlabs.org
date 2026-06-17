@@ -300,7 +300,12 @@ function gatewayCount() { return aliveCount(true); }
 function resize() {
   DPR = Math.min(devicePixelRatio || 1, DPR_CAP);
   const oldW = W, oldH = H;
-  W = innerWidth; H = innerHeight;
+  // clientWidth/Height of the root is the iframe's own content box. innerWidth/
+  // innerHeight can be 0 or stale on iOS Safari when this script runs before the
+  // iframe is laid out, which sized the canvas to nothing (blank hero on mobile).
+  W = document.documentElement.clientWidth || innerWidth;
+  H = document.documentElement.clientHeight || innerHeight;
+  if (!W || !H) return;   // not laid out yet — init()/the observer will retry
   canvas.width = W * DPR; canvas.height = H * DPR;
   canvas.style.width = W + "px"; canvas.style.height = H + "px";
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -315,6 +320,9 @@ function resize() {
   }
 }
 addEventListener("resize", resize);
+// iOS Safari can settle the iframe's size after this script first runs; observe
+// the root box so the canvas re-fits the moment a real size becomes available.
+if (window.ResizeObserver) new ResizeObserver(resize).observe(document.documentElement);
 
 // ── graph ─────────────────────────────────────────────────────────
 function addNode(x, y, isGateway) {
@@ -1003,9 +1011,30 @@ litBtn.onclick = () => {
 };
 updateLitBtn();
 
-resize();
-if (reduced) { growStatic(); }
-else { seed(); requestAnimationFrame(frame); }
+// Defer first paint until the iframe actually has a size. On iOS Safari this
+// script can run before layout (W/H = 0); seeding then would place the colony
+// at 0,0 and size the canvas to nothing. Retry until sized, then start.
+function init() {
+  resize();
+  if (!W || !H) { requestAnimationFrame(init); return; }
+  if (reduced) { growStatic(); }
+  else { seed(); requestAnimationFrame(frame); }
+}
+// TEMP self-diagnostic: shows a tiny readout ONLY if the hero is still blank
+// after load (no size / no nodes) or a script error fired. Invisible when the
+// animation works. Remove once mobile is confirmed.
+function showDiag(t) {
+  let d = document.getElementById("diag");
+  if (!d) { d = document.createElement("div"); d.id = "diag";
+    d.style.cssText = "position:absolute;left:6px;bottom:6px;z-index:9;color:#9ff5c9;font:9px/1.3 ui-monospace,monospace;background:#000c;padding:3px 6px;max-width:92%;border-radius:4px";
+    document.body.appendChild(d); }
+  d.textContent = "hero: " + t;
+}
+addEventListener("error", e => showDiag("ERR " + (e.message || e.error)));
+init();
+setTimeout(() => {
+  if (!W || !H || !nodes.length) showDiag(`blank W${W} H${H} cw${document.documentElement.clientWidth} iw${innerWidth} dpr${devicePixelRatio} n${nodes.length} r${reduced ? 1 : 0}`);
+}, 3500);
 </script>
 </body>
 </html>
