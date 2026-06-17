@@ -2,31 +2,160 @@
 import Base from "../layouts/Base.astro";
 import SiteNav from "../components/SiteNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-/* TEMPORARY under-construction placeholder. The full /why essay (creek
-   story etc.) is preserved in git history — restore it with:
-   git checkout <prior-commit> -- src/pages/why.astro */
+/* /why (B3/B4). Mission-first essay with the Codornices creek story in
+   the back half (on paper, set apart). Locked copy-why.md; claims-clean
+   (Wildcat Creek explicitly hypothetical, $5,000 personal, Reticulum
+   credited). Photo slot = C4 (the real first two nodes). Awaits Conor's
+   B6 voice pass + the personal origin sign-off (received). */
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-const repo = "https://github.com/LBM-Labs/Mycelium_Network";
+const repo = "https://github.com/LBM-Labs/Mycelium_Network"; // A7
 ---
-<Base title="Why — coming soon · LBM Labs" description="This page is under construction.">
+<Base title="Why I'm building Mycelium" description="Good ground truth is priced like a luxury, so the small places decline in the dark. Why I'm building Mycelium: free, open telemetry so they get watched too.">
   <SiteNav current="why" />
 
-  <main class="uc" id="main">
+  <header class="page-head" id="main">
     <div class="wrap narrow">
-      <p class="kicker">Coming soon</p>
-      <h1>This area is under construction.</h1>
-      <p class="lede">This page isn't ready yet. In the meantime, you can
-      <a href={`${base}/build`}>build a node</a> or
-      <a href={repo}>read the code&nbsp;↗</a>.</p>
+      <p class="kicker">Why.</p>
+      <h1>Why I'm building Mycelium.</h1>
     </div>
-  </main>
+  </header>
+  <section class="essay">
+    <div class="wrap narrow">
+      <h2>The world is changing faster than we're measuring it.</h2>
+      <p>Ask a simple question about a small piece of the natural world
+      — is this creek warming? when did the oxygen drop? what did last summer
+      actually do to this meadow? — and the honest answer is often that nobody
+      knows. Not because nobody cares, but because nobody was measuring.</p>
+      <p>Continuous environmental monitoring exists, and it works. It's also
+      ludicrously expensive. A single commercial telemetry station
+      runs thousands of dollars before the cellular or satellite subscription
+      starts, and the data often lands in a platform you rent rather than own. 
+      This has prevented many of those closest to the land – watershed groups, 
+      small farms, tribes, researchers, and activists – from being able to access
+       continuous monitoring. Mycelium is designed to change that.</p>
+    </div>
+  </section>
+
+  <section class="creek" data-theme="paper">
+    <div class="wrap narrow">
+      <h2>The creek this started with.</h2>
+      <p>Growing up in west Berkeley, one of my favorite places was the short, daylighted section of Codornices Creek on the Ohlone Greenway near Gilman
+      Street. This segment of creek is far from wild, it sits under the BART
+      tracks and flows into concrete tunnels on either side. But on warm days after
+      preschool my godfather would take me there and we would "fish" with a piece of
+      string tied to a stick, a bent nail, and a piece of cheese. I vividly remember the
+      trout nibbling at the cheese while crayfish crawled along the creek bottom and
+      hid in the undercut banks. I (fortunately) never managed to catch a fish, but this piece of
+      urban nature was magical and precious to me.</p>
+
+      <figure class="photo-slot" aria-hidden="true">
+        <span class="ph-lbl mono">photo</span>
+        <span class="ph-desc">the real first two nodes — a leaf and a gateway</span>
+      </figure>
+
+      <p>Today that same section of creek is far more desolate, floating plastic
+      bags have replaced the trout, which have long since disappeared. You can still
+      see the occasional crayfish crawling the bottom, but they look more like
+      survivors of a disaster than members of a functioning ecosystem. Over the
+      intervening years this short section of creek has been degraded to a mere
+      shadow of its previous self, a process which is repeating the world over in
+      uncountable small fragments of the natural world.</p>
+      <p>Despite living nearby my whole life:</p>
+      <blockquote class="thesis">I could not tell you why this happened.</blockquote>
+      <p>Was it warmer waters, a diesel spill, or something completely different that killed off the trout? To
+      protect these precious remnants, I realized that we first needed to understand
+      what was happening to them, but the existing tools are far too expensive and
+      complex. No one was going to spend $5,000 on a telemetered data logger for this
+      short stretch of urban stream.</p>
+    </div>
+  </section>
+
+  <section class="built">
+    <div class="wrap narrow">
+      <h2>What I built.</h2>
+      <p>If I wanted to help save these places, I needed to figure out how to build
+      telemetry that was cheap, reliable, and easy to deploy. It was after being
+      inspired by Mark Qvist's phenomenal
+      <a href="https://reticulum.network">Reticulum&nbsp;↗</a> networking stack that
+      the idea for the Mycelium network was born: a distributed, open,
+      hardware-agnostic environmental telemetry mesh that would allow anyone to
+      cheaply deploy remotely monitored sensors.</p>
+      <p>Rather than a cellular or satellite backhaul, Mycelium uses meshed 915 MHz
+      LoRa radios. As soon as you power on a node, it finds and connects to other
+      nearby nodes automatically. So long as one node in the chain is connected to a
+      gateway with WiFi, all connected nodes can send encrypted data down the chain
+      to the gateway, which then posts it to an online database. Each deployed node
+      strengthens and extends the range of the existing mesh, regardless of who
+      operates it, and because all traffic is end to end encrypted, teams need not
+      trust other node or gateway operators, or even know who they are.</p>
+      <p>The chained mesh nature of the network also allows networks to penetrate
+      into areas without cellular coverage where previously only expensive satellite
+      telemetry was viable. For example, say you needed to take water temperature
+      measurements along the East Bay's Wildcat Creek. A single WiFi gateway node at
+      the Tilden visitor center would connect the entire chain to the internet,
+      allowing a node miles away to upload its data and be monitored remotely at zero
+      ongoing cost, regardless of the fact that much of the watershed lacks cell
+      coverage.</p>
+      <p>In order to understand the state of our natural world, we need better data.
+      Real-time data with higher spatial resolution so it's not only the few most
+      important places which get monitored. Though it's still in beta, I hope the
+      Mycelium network can be one of the pieces which helps to fill in this gap,
+      empowering academics, government agencies, and citizen scientists to fill in
+      the blank spots in our knowledge of what is happening to the world around
+      us.</p>
+    </div>
+  </section>
+
+  <section class="stands">
+    <div class="wrap narrow">
+      <h2>Where it stands, honestly.</h2>
+      <p>Mycelium is young. The network itself runs end to end on the bench today,
+      with its reliability layer tested by scripted failure drills against the
+      live system. Field hardware (solar power, enclosures, real-world radio
+      range) is still being proven, and I won't publish performance claims until
+      it has been. If you are an engineer, researcher, or just someone with an idea you think
+      could make mycelium better, I'd love to hear from you. Shoot me an email or issue a 
+      PR if you're interested in contributing.</p>
+      <p class="dim">The story of what happens next is partly yours to write.</p>
+      <div class="ctas">
+        <a class="btn-primary" href={`${base}/build`}>Build one</a>
+        <a class="btn-ghost" href={repo}>Read the code</a>
+      </div>
+    </div>
+  </section>
 
   <SiteFooter />
 </Base>
 
 <style>
-  .uc { display: flex; align-items: center; min-height: 66vh; padding: var(--s-8) 8vw; }
-  .uc h1 { margin: var(--s-3) 0 var(--s-4); }
-  .uc .lede { font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--dim); max-width: 50ch; }
-  .uc a { color: var(--accent); }
+  .page-head { padding: var(--s-9) 8vw var(--s-4); }
+  .essay, .creek, .built, .stands { padding-block: var(--s-7); }
+  .essay p, .creek p, .built p, .stands p { font-size: var(--t-body); line-height: 1.7; max-width: 64ch; }
+  .essay h2, .creek h2, .built h2, .stands h2 { margin-top: var(--s-7); }
+  .essay h2:first-child { margin-top: 0; }
+  .essay strong { color: var(--accent); }
+  [data-theme="paper"] .essay strong { color: var(--accent-deep); }
+
+  .thesis {
+    font-family: var(--font-display);
+    font-weight: 650;
+    font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: var(--ink-dark);
+    margin: var(--s-6) 0;
+    padding-left: var(--s-5);
+    border-left: 3px solid var(--accent-deep);
+    max-width: 20ch;
+  }
+  .creek .close { color: var(--dim-dark); }
+  .creek .photo-slot {
+    aspect-ratio: 16 / 9; margin: var(--s-6) 0; border: 1px dashed color-mix(in srgb, var(--accent-deep) 35%, transparent);
+    border-radius: var(--r-sm); display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: var(--s-2); text-align: center;
+    background: color-mix(in srgb, var(--accent-deep) 4%, transparent);
+  }
+  .creek .ph-lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-deep); }
+  .creek .ph-desc { font-size: var(--t-small); color: var(--dim-dark); }
+  .stands .ctas { margin-top: var(--s-5); }
 </style>
