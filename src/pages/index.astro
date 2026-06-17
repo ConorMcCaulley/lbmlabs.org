@@ -137,6 +137,10 @@ TOTAL .......................... <span class="ok">~$262–307</span></div>
       <p class="kicker">{t.reliability.kicker}</p>
       <h2>{t.reliability.heading}</h2>
       {t.reliability.body.map((para) => <p class="rel-body">{para}</p>)}
+      <ol class="rel-list">
+        {t.reliability.points.map((p) => <li>{p}</li>)}
+      </ol>
+      <p class="rel-body rel-verified">{t.reliability.verified}</p>
       <div class="badges">
         {t.reliability.badges.map((b) => <span class="badge">{b}</span>)}
       </div>
@@ -252,9 +256,15 @@ DRILL PASS</div>
   /* lead paragraph under an h2 */
   .section-lead { font-size: clamp(1.05rem, 1.5vw, 1.2rem); color: var(--text-dim); max-width: 60ch; margin-top: var(--s-3); }
 
-  /* reliability body: honour the line breaks in the copy so the numbered
-     1–5 list renders as separate lines, not one run-on paragraph */
-  .rel-body { white-space: pre-line; }
+  /* reliability: prose paragraphs, then the numbered survivability list as a
+     spaced <ol> (was a cramped pre-line blob), then the verified lead-in */
+  .rel-list {
+    max-width: 64ch; margin: var(--s-4) 0 var(--s-6); padding-left: 1.7em;
+    display: flex; flex-direction: column; gap: var(--s-5);
+  }
+  .rel-list li { color: var(--text-dim); line-height: 1.65; padding-left: var(--s-2); }
+  .rel-list li::marker { color: var(--accent); font-weight: 600; }
+  .rel-verified { margin-top: var(--s-2); }
 
   /* §3 three-up */
   .threeup { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5); margin: var(--s-5) 0; }

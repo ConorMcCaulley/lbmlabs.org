@@ -38,7 +38,7 @@ Mycelium is an open-source, LoRa mesh telemetry network designed to make adding 
     statusNote: `(sample)`,
     // the little legend over the animation. Keys MUST stay in this order
     // (each is paired with its coloured swatch): gateway, node, packet, buffered.
-    legendTitle: `Mycelium network — a live representation`,
+    legendTitle: `Mycelium network — a generated representation`,
     legendKeys: [`gateway`, `node`, `data packet`, `buffered reading`],
     legendHintLead: `Click any node or gateway`, // shown bold
     legendHintTail: `to knock it out — watch the rest of the network reroute itself.`,
@@ -108,15 +108,18 @@ Mycelium is an open-source, LoRa mesh telemetry network designed to make adding 
     kicker: `Built like infrastructure, not a gadget.`,
     heading: `Reliability and survivability are at the core of the Mycelium architecture.`,
     body: [
-      `Breakdowns in the field are expensive. They often necessitate a technician physically going out to the station to reset it, which is especially problematic if your nodes are in hard-to-reach locations (on mountaintops, buoys, etc.). While hardware problems are to some extent inevitable, starting with field reliability as the basis for each decision in the software stack can help make field deployments more reliable and thus cheaper. 
-Mycelium approaches software reliability in a variety of ways. 
-1. Every reading is committed to disk the moment it's taken and deleted only after its destination cryptographically confirms receipt. 
-2. Destination or gateway outages buffer and drain automatically. If a node loses its connection, it stores and consolidates readings until the connection is re-established. By transmitting multiple readings together after an outage, Mycelium helps to avoid network overload. If the destination is down, gateways themselves can hold onto packets, preventing retransmission from the source node and the resulting network bandwidth drain.
-3. Nodes watch themselves — and recover from wedges, crashes, and even a radio knocked off the bus, on their own. Three watchdogs watch the system at separate layers (process → OS process-supervisor → silicon) and reboot if a process stalls, crashes, or enters an infinite loop.
-4. Automatic notification of an offline node. If the destination script does not receive a reading for a specific amount of time (set to 3x the log rate but easily modifiable), it sends a message to the provided email that the node has fallen silent.
-5. While the current node hardware design has a single logger, microcomputer, battery, and radio unit, the V2 node that is currently in the planning phase has complete hardware redundancy. The idea is that even with the physical degradation or destruction of a hardware component, the nodes should be able to reroute any process around the degraded hardware and alert the destination address of the failure. This means hardware degradation turns into something you can deal with during routine maintenance rather than necessitating an emergency trip to the field.`,
-      `Features 1–4 have been verified by sabotaging the bench network with scripted failure drills:`,
+      `Breakdowns in the field are expensive. They often necessitate a technician physically going out to the station to reset it, which is especially problematic if your nodes are in hard-to-reach locations (on mountaintops, buoys, etc.). While hardware problems are to some extent inevitable, starting with field reliability as the basis for each decision in the software stack can help make field deployments more reliable and thus cheaper.`,
+      `Mycelium approaches software reliability in a variety of ways:`,
     ],
+    // the survivability list — rendered as a spaced <ol> in index.astro
+    points: [
+      `Every reading is committed to disk the moment it's taken and deleted only after its destination cryptographically confirms receipt.`,
+      `Destination or gateway outages buffer and drain automatically. If a node loses its connection, it stores and consolidates readings until the connection is re-established. By transmitting multiple readings together after an outage, Mycelium helps to avoid network overload. If the destination is down, gateways themselves can hold onto packets, preventing retransmission from the source node and the resulting network bandwidth drain.`,
+      `Nodes watch themselves — and recover from wedges, crashes, and even a radio knocked off the bus, on their own. Three watchdogs watch the system at separate layers (process → OS process-supervisor → silicon) and reboot if a process stalls, crashes, or enters an infinite loop.`,
+      `Automatic notification of an offline node. If the destination script does not receive a reading for a specific amount of time (set to 3x the log rate but easily modifiable), it sends a message to the provided email that the node has fallen silent.`,
+      `While the current node hardware design has a single logger, microcomputer, battery, and radio unit, the V2 node that is currently in the planning phase has complete hardware redundancy. The idea is that even with the physical degradation or destruction of a hardware component, the nodes should be able to reroute any process around the degraded hardware and alert the destination address of the failure. This means hardware degradation turns into something you can deal with during routine maintenance rather than necessitating an emergency trip to the field.`,
+    ],
+    verified: `Features 1–4 have been verified by sabotaging the bench network with scripted failure drills:`,
     badges: [
       `gateway outage ✓`,
       `node restart ✓`,
