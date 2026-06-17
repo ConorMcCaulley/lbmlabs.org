@@ -2,10 +2,9 @@
 import Base from "../layouts/Base.astro";
 import SiteNav from "../components/SiteNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-/* /build (B2). The on-ramp, three tiers, from the locked copy-build.md.
-   Voice: a friend handing you a soldering iron, not a product configurator.
-   Photo slots = C4 (shot list shown). Costs from bom.md (C2 will render
-   the receipt). Repo deep links = A7 placeholder. */
+/* /build (B2). The on-ramp, three tiers. Voice: Conor's own, plain and
+   first-person, matched to the /why page and homepage copy (not the old
+   copy-build.md tone). Photo slots = C4. Costs from bom.md. */
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const repo = "https://github.com/LBM-Labs/Mycelium_Network";          // A7
 const bom = "#";           // bom.md deep link
@@ -17,21 +16,25 @@ const issues = "#";        // repo issues
 const tiers = [
   {
     n: "Tier 1", title: "The bench leaf", cost: "~$176 · one afternoon",
-    photo: "the bench leaf — project box, antenna bulkhead, Mayfly, Grove sensor",
-    body: "The smallest build that exercises the entire real pipeline: a $7 thermometer feeds a Mayfly logger, your Pi seals each reading with AES-256-GCM, the LoRa radio carries it to your gateway, and it lands in your Google Sheet — with a status LED blinking through it all. USB wall power, no solar, no enclosure, no soldering.",
-    aside: "This is the build that teaches you the system. Pinch the thermistor between two fingers and watch your spreadsheet notice.",
+    img: `${base}/bench-leaf.jpg`,
+    alt: "A Raspberry Pi Zero 2 W wired to a LILYGO LoRa radio with its antenna attached, sitting on a workbench. The Mayfly sensor board is not installed yet.",
+    caption: "The first bench leaf, a Pi Zero 2 W and a LoRa radio. No Mayfly sensor board on it yet.",
+    body: "This is the smallest build, but it still runs the entire pipeline. A $7 thermometer feeds a Mayfly logger, your Pi encrypts each reading with AES-256-GCM, a LoRa radio carries it to your gateway, and it lands in a Google Sheet you own. A status LED blinks the whole time so you can watch it working. It runs on USB wall power, so there is no solar, no enclosure, and no soldering.",
+    aside: "This is the build that teaches you the system. Pinch the thermistor between your fingers for a minute and you should watch the next few readings climb in your spreadsheet.",
     rows: [
       ["Parts", "~$176, full list", bom],
       ["Guide", "step-by-step bring-up", guide],
       ["You'll need", "a laptop, a micro-SD reader, an afternoon", null],
     ],
-    rule: "One rule before you start: never power the radio without its antenna attached. (The guide repeats this. It means it.)",
+    rule: "There is one rule before you start. Never power the radio without its antenna attached. The guide repeats this a few times because it really does matter.",
   },
   {
     n: "Tier 2", title: "The gateway", cost: "a Pi you supply + a ~$25 radio",
-    photo: "the gateway box — a Pi and a LoRa radio bridging the mesh to WiFi",
-    body: "A leaf alone is a sensor; a gateway makes it a network. The gateway is a Pi you supply — a Pi 4 is the tested target, a spare Pi Zero 2 W works too — plus the same $25 LoRa radio as the leaf. It listens for sealed readings over LoRa, forwards them to your destination over WiFi (behind a host-allowlist and a per-sensor rate limit), and announces itself so leaves can find it. Pair it with your bench leaf and watch a reading travel the whole path.",
-    aside: "Kill the gateway's power mid-batch and the leaf buffers to disk, then drains everything when it returns — the failure drills in the repo run that sabotage for you.",
+    img: `${base}/gateway.jpg`,
+    alt: "A Raspberry Pi 4 wired to a LILYGO LoRa radio with its antenna attached, sitting on a workbench.",
+    caption: "The first gateway, a Raspberry Pi 4 and a LoRa radio.",
+    body: "A leaf on its own is just a sensor. A gateway is what turns it into a network. The gateway is a Pi you supply (a Pi 4 is what I test on, but a spare Pi Zero 2 W works too) plus the same $25 LoRa radio the leaf uses. It listens for encrypted readings over LoRa and forwards them to your destination over WiFi, behind a host allowlist and a per-sensor rate limit. It also announces itself so nearby leaves can find it. Once it is running, pair it with your bench leaf and you can watch a reading travel the whole way.",
+    aside: "If you cut the gateway's power in the middle of a batch, the leaf buffers everything to disk and drains it once the gateway comes back. The failure drills in the repo run that exact sabotage for you.",
     rows: [
       ["Parts", "a Pi + the LoRa radio", gatewayGuide],
       ["Guide", "build the gateway", gatewayGuide],
@@ -40,13 +43,13 @@ const tiers = [
     rule: null,
   },
   {
-    n: "Tier 3", title: "The field node", cost: "not yet documented — on purpose",
+    n: "Tier 3", title: "The field node", cost: "not documented yet, on purpose",
     photo: null,
-    body: "The solar-powered, weatherproof version: LiFePO4 battery, MPPT charging, an IP68 Pelican-style case, pole mount, a real SDI-12 sonde. The draft BOM lands around $262–307 in parts plus mounting hardware — but it hasn't survived a real season of weather yet, and I don't publish build guides for things I haven't built and broken first.",
-    aside: "The design work is public in the repo today if you want to scout ahead or help test. This section becomes a real guide when the field trial completes — the roadmap tracks it.",
+    body: "This is the solar-powered, weatherproof version. It uses a LiFePO4 battery, MPPT charging, an IP68 Pelican-style case, a pole mount, and a real SDI-12 sonde. The draft BOM comes to around $262 to $307 in parts, plus mounting hardware. I haven't run it through a full season of weather yet though, and I don't publish build guides for things I haven't built and broken myself first.",
+    aside: "The design work is already public in the repo if you want to scout ahead or help test it. This section will become a real guide once the field trial is done, and the roadmap tracks where that stands.",
     rows: [
       ["Design", "hardware architecture (draft)", arch],
-      ["Status", "field trial pending — roadmap", repo],
+      ["Status", "field trial pending (roadmap)", repo],
     ],
     rule: null,
   },
@@ -58,29 +61,34 @@ const tiers = [
   <header class="page-head" id="main">
     <div class="wrap narrow">
       <h1>Build one.</h1>
-      <p class="lede">Everything on this page is something you can actually do —
-      no kit to order, no account to create. You buy off-the-shelf
+      <p class="lede">Everything on this page is something you can actually do.
+      There is no kit to order and no account to create. You buy off-the-shelf
       parts, follow the guide, and end up with a sensor node that delivers
       encrypted readings to a spreadsheet you own. Start at the bench and work
-      outward.</p>
+      outward from there.</p>
       <p class="beta mono">⚠ Mycelium is in beta. The first two tiers are
-      documented from builds that exist and run today; the field tier is
-      published when the field hardware survives real weather, not before.</p>
+      documented from builds that exist and run today. The field tier only gets
+      published once the field hardware has survived real weather.</p>
     </div>
   </header>
 
   <section class="tiers">
     <div class="wrap narrow">
       {tiers.map((t) => (
-        <article class={`tier ${t.photo ? "" : "no-photo"}`}>
+        <article class={`tier ${(t.img || t.photo) ? "" : "no-photo"}`}>
           <div class="tier-head">
             <span class="tier-n mono">{t.n}</span>
             <h2>{t.title}</h2>
             <span class="tier-cost mono">{t.cost}</span>
           </div>
-          {t.photo
-            ? <div class="photo-slot" aria-hidden="true"><span class="ph-lbl mono">photo</span><span class="ph-desc">{t.photo}</span></div>
-            : <div class="photo-slot empty" aria-hidden="true"><span class="ph-desc">no photo yet — that's the point</span></div>}
+          {t.img
+            ? <figure class="photo">
+                <img src={t.img} alt={t.alt} width="1600" height="1200" loading="lazy" />
+                {t.caption && <figcaption class="ph-cap">{t.caption}</figcaption>}
+              </figure>
+            : t.photo
+              ? <div class="photo-slot" aria-hidden="true"><span class="ph-lbl mono">photo</span><span class="ph-desc">{t.photo}</span></div>
+              : <div class="photo-slot empty" aria-hidden="true"><span class="ph-desc">no field photo yet</span></div>}
           <div class="tier-body">
             <p>{t.body}</p>
             {t.aside && <p class="dim">{t.aside}</p>}
@@ -101,17 +109,18 @@ const tiers = [
 
   <section class="connect">
     <div class="wrap narrow">
-      <p class="connect-line">Built a leaf and a gateway? <a href={pairingGuide}>Pair them →</a> — one identity hash, and the network comes alive.</p>
+      <p class="connect-line">Built a leaf and a gateway? <a href={pairingGuide}>Pair them →</a>. It takes one shared identity hash and the two start talking to each other.</p>
     </div>
   </section>
 
   <section class="after" data-theme="paper">
     <div class="wrap narrow">
       <h2>After the build</h2>
-      <p>Your node's readings are yours; so is the network you're growing. Found
-      a rough edge in a guide? That's a bug — <a href={repo}>file it like one</a>.
-      Built something I should know about? Same place. There is no support tier
-      because there is no product — there's a repo, and you're in it now.</p>
+      <p>Your node's readings are yours, and so is the network you are growing. If
+      you find a rough edge in a guide, that is a bug, so <a href={repo}>file it
+      like one</a>. If you built something I should know about, the same place
+      works. There is no support tier because there is no product to support.
+      There is just a repo, and now you are part of it.</p>
       <div class="ctas">
         <a class="btn-primary" href={repo}>Read the code</a>
         <a class="btn-ghost" href={`${base}/why`}>Why I'm building this →</a>
@@ -146,6 +155,10 @@ const tiers = [
   .photo-slot.empty { border-style: solid; border-color: var(--line); }
   .ph-lbl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
   .ph-desc { font-size: var(--t-small); color: var(--dim); max-width: 30ch; }
+  .photo { margin: 0; }
+  .photo img { display: block; width: 100%; height: auto; border-radius: var(--r-sm);
+    border: 1px solid var(--line); }
+  .ph-cap { margin-top: var(--s-2); font-size: var(--t-small); color: var(--dim); line-height: 1.4; }
   .tier-body p { max-width: none; }
   .tier-rows { margin: var(--s-4) 0 0; border-top: 1px solid var(--line); }
   .tier-rows .row { display: grid; grid-template-columns: 9rem 1fr; gap: var(--s-3);

@@ -9,32 +9,32 @@ import SiteFooter from "../../components/SiteFooter.astro";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const repo = "https://github.com/LBM-Labs/Mycelium_Network"; // A7
 const steps = [
-  { h: "Grab the gateway's identity hash", b: "On the gateway, <code>journalctl -u egress-gateway</code> prints its <strong>identity hash</strong> at startup. Copy it — it's the gateway's cryptographic address, and the one thing the leaf needs to trust it." },
-  { h: "Tell the leaf to trust it", b: "On the leaf, set <code>gateway_identity_hash</code> in <code>/etc/mycelium-network-leaf/config.toml</code> to that hash, then <code>sudo systemctl restart leaf-node</code>. That's the whole pairing — one config value." },
-  { h: "Watch them find each other", b: "The leaf hears the gateway's announce and opens an encrypted link. Its LED goes from the slow-blink <em>discovering</em> to a solid <em>connected</em> on the first delivery, and its queued backlog drains — in the journal: <code>delivered 3 reading(s) (rows …), 0 still queued</code>." },
-  { h: "See it land", b: "A <code>temp_c</code> row appears in the spreadsheet your gateway forwards to. That's the whole path, end to end: <span class=\"path mono\">sense → seal → relay → gateway → your sheet</span>." },
+  { h: "Grab the gateway's identity hash", b: "On the gateway, <code>journalctl -u egress-gateway</code> prints its <strong>identity hash</strong> at startup. Copy it down. It's the gateway's cryptographic address, and the one thing the leaf needs in order to trust it." },
+  { h: "Tell the leaf to trust it", b: "On the leaf, set <code>gateway_identity_hash</code> in <code>/etc/mycelium-network-leaf/config.toml</code> to that hash, then run <code>sudo systemctl restart leaf-node</code>. That is the whole pairing, one config value." },
+  { h: "Watch them find each other", b: "The leaf hears the gateway's announce and opens an encrypted link. Its LED goes from the slow-blink <em>discovering</em> to a solid <em>connected</em> on the first delivery, and its queued backlog drains. In the journal you'll see something like <code>delivered 3 reading(s) (rows …), 0 still queued</code>." },
+  { h: "See it land", b: "A <code>temp_c</code> row appears in the spreadsheet your gateway forwards to. That is the whole path running end to end, from <span class=\"path mono\">sense → encrypt → relay → gateway → your sheet</span>." },
 ];
 const leds = [
   ["solid off", "the service isn't running"],
-  ["slow blink (1 Hz)", "discovering — looking for a gateway to announce"],
-  ["solid on", "connected — the last reading was delivered"],
+  ["slow blink (1 Hz)", "discovering, looking for a gateway to announce"],
+  ["solid on", "connected, the last reading was delivered"],
   ["fast blink", "the last transmit failed (see troubleshooting)"],
 ];
 ---
-<Base title="Build guide — pairing a leaf and gateway" description="Connect a Mycelium leaf and gateway: one identity hash and a restart, and a reading travels the whole path to a spreadsheet you own.">
+<Base title="The pairing build guide" description="Connect a Mycelium leaf and gateway. One identity hash and a restart, and a reading travels the whole path to a spreadsheet you own.">
   <SiteNav current="build" />
 
   <article class="guide" id="main">
     <div class="wrap narrow">
       <p class="crumb mono"><a href={`${base}/build`}>← Build</a> · guide</p>
       <h1>Pair your nodes</h1>
-      <p class="meta mono">one identity hash · a restart · the network comes alive</p>
+      <p class="meta mono">one identity hash · a restart · the network starts working</p>
       <p class="lede">You've built a <a href={`${base}/build/bench-leaf`}>leaf</a>
       (sampling and queuing, slow-blinking <em>discovering</em>) and a
       <a href={`${base}/build/gateway`}>gateway</a> (announcing itself on the
-      network). Pairing is how they find each other and the queued readings reach
-      a spreadsheet you own. It's one config value and a restart — and the
-      moment it connects, the leaf's whole backlog drains.</p>
+      network). Pairing is how they find each other so the queued readings reach
+      a spreadsheet you own. It's one config value and a restart, and the moment
+      it connects, the leaf's whole backlog drains.</p>
 
       <h2>Pair them</h2>
       <ol class="steps">
@@ -47,22 +47,22 @@ const leds = [
       </ol>
 
       <div class="prove">
-        <h3>Now prove it's robust — the gateway-outage drill</h3>
+        <h3>Now prove it's robust with the gateway-outage drill</h3>
         <p><strong>Pull the gateway's power mid-batch.</strong> The leaf keeps
-        sampling and buffers to disk (its LED goes to the fast-blink <em>fail</em>);
-        restore power and it reconnects, then drains everything in order —
-        nothing lost, nothing out of sequence. There's a script in the repo
+        sampling and buffers to disk (its LED goes to the fast-blink <em>fail</em>).
+        Restore power and it reconnects, then drains everything in order, with
+        nothing lost and nothing out of sequence. There's a script in the repo
         (<code>drill-gateway-outage.sh</code>) that runs exactly this and checks
-        the count: <span class="ok mono">zero readings lost</span>.</p>
+        the count, and it should report <span class="ok mono">zero readings lost</span>.</p>
       </div>
 
-      <h2>Why a hash — and why neither node has to trust the other</h2>
+      <h2>Why a hash, and why neither node has to trust the other</h2>
       <p>The leaf addresses the gateway by its cryptographic <strong>identity
       hash</strong>, and the gateway rate-limits and logs by the leaf's identity
       hash. Both are authenticated by Reticulum, so a leaf can't impersonate
-      another, and neither operator has to trust — or even know — who runs the
-      other node. That's what lets strangers' networks strengthen each other:
-      they share radio waves, nothing else.</p>
+      another, and neither operator has to trust, or even know, who runs the
+      other node. That is what lets strangers' networks strengthen each other.
+      They share radio waves and nothing else.</p>
 
       <h2>The leaf's LED, decoded</h2>
       <table class="parts mono">
@@ -76,18 +76,18 @@ const leds = [
       <h2>Troubleshooting</h2>
       <ul class="trouble">
         <li><strong>Leaf stuck slow-blinking <em>discovering</em>:</strong> the <code>gateway_identity_hash</code> is wrong or empty, the gateway isn't announcing (check <code>journalctl -u egress-gateway</code>), or the two are out of radio range.</li>
-        <li><strong>LED fast-blinking (<em>fail</em>):</strong> the link reached the gateway but it rejected the forward — the destination isn't in the gateway's <code>allowed_hosts</code>, the leaf hit its rate limit, or the request was too big. The gateway journal says which.</li>
-        <li><strong>Delivers, but no row in the spreadsheet:</strong> that's the destination end — check the Apps Script URL and the sheet's permissions on the gateway side.</li>
+        <li><strong>LED fast-blinking (<em>fail</em>):</strong> the link reached the gateway but it rejected the forward. The destination isn't in the gateway's <code>allowed_hosts</code>, the leaf hit its rate limit, or the request was too big. The gateway journal says which.</li>
+        <li><strong>Delivers, but no row in the spreadsheet:</strong> that's the destination end, so check the Apps Script URL and the sheet's permissions on the gateway side.</li>
       </ul>
 
-      <h2>What this proves — and what it doesn't</h2>
-      <p><strong>Proves:</strong> the complete delivery path end to end,
+      <h2>What this proves, and what it doesn't</h2>
+      <p><strong>It proves</strong> the complete delivery path end to end,
       auto-discovery by announce, encrypted addressing with no mutual trust
-      required, and the outage spool-and-drain — a real two-node network on your
-      bench.</p>
-      <p class="dim"><strong>Doesn't prove:</strong> multi-hop relay across several
-      nodes, real-world radio range, or power — those come with more nodes and the
-      field build, once they've survived real weather.</p>
+      required, and the outage spool-and-drain. It's a real two-node network on
+      your bench.</p>
+      <p class="dim"><strong>It doesn't prove</strong> multi-hop relay across several
+      nodes, real-world radio range, or power. Those come with more nodes and the
+      field build, once they have survived real weather.</p>
 
       <div class="ctas">
         <a class="btn-primary" href={`${base}/build`}>← Back to Build</a>

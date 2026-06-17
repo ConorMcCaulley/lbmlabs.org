@@ -12,7 +12,7 @@ const parts = [
   ["Official 5 V 2.5 A micro-USB supply", "$8", "into the PWR IN port"],
   ["Micro-USB OTG adapter", "$3", "into the USB (data) port"],
   ["2-port USB 2.0 hub", "$5", "bus-powered is fine on the 2.5 A supply"],
-  ["LILYGO TTGO LoRa32 v2.1 + 915 MHz antenna", "$25", "the radio — never power without the antenna"],
+  ["LILYGO TTGO LoRa32 v2.1 + 915 MHz antenna", "$25", "the radio, never power it without the antenna"],
   ["SMA male → SMA female bulkhead cable (RG316, ~20 cm)", "$8", "panel-mounts the antenna"],
   ["EnviroDIY Mayfly v1.1", "$80", "the sensor brain"],
   ["USB-A → USB-C cable (short)", "$4", "hub → Mayfly: power + serial"],
@@ -21,7 +21,7 @@ const parts = [
   ["LED + ~330 Ω resistor + breadboard + 2 jumpers", "$3", "status LED on GPIO 17"],
   ["Plastic project box", "on hand", "it all goes in here"],
 ];
-const topology = `5V 2.5A supply ──► [PWR IN]   (power pins only — no data)
+const topology = `5V 2.5A supply ──► [PWR IN]   (power pins only, no data)
 
 [USB] ── OTG adapter ── 2-port hub ──┬── TTGO LoRa32  → /dev/rnode
                                      └── Mayfly v1.1  → /dev/mayfly
@@ -30,13 +30,13 @@ GPIO 17 ── 330 Ω ── LED ── GND       (breadboard)
 
 Mayfly AA0/AA1 Grove socket ── Grove cable ── Grove temp sensor`;
 const steps = [
-  { h: "Flash the Mayfly", b: "In the Arduino IDE, add the board package <em>EnviroDIY ATmega Boards</em> → <em>EnviroDIY Mayfly 1284P</em> and the <em>Adafruit ADS1X15</em> library. Open the Grove-temp sketch, read its PORT CONFIG header, and upload. With the Grove sensor in the <strong>AA0/AA1 aux-analog socket</strong> (Grove power jumper at 3.3 V), the Serial Monitor at 115200 should show a <code>$MYC,…</code> line every 10 s and the green LED blinking per line — <code>temp_c</code> near your thermostat's opinion." },
-  { h: "Set up the Pi", b: "Flash Pi OS Lite 64-bit, clone the repo, run <code>leaf/setup.sh</code>, and do the key + <code>config.toml</code> steps it prints — including <code>sensor = \"mayfly\"</code> in <code>/etc/mycelium-network-leaf/config.toml</code>. Leave <code>gateway_identity_hash</code> blank for now; you'll set it when you build and pair a gateway. Reboot." },
-  { h: "Plug the chain together", b: "Wire it per the topology above, then verify both serial devices appear: <code>ls -la /dev/rnode /dev/mayfly</code>. (udev pins each by chip, so hub port order never matters.)" },
-  { h: "Start and watch", b: "<code>sudo systemctl start rnsd leaf-node</code>, then <code>journalctl -u leaf-node -f</code>. With no gateway yet, you should see the leaf sampling real readings and queuing them — <code>sampled: temp_c=21.340 (queue depth 1)</code>, the depth climbing — and the LED slow-blinking <em>discovering</em> as it listens for a gateway to announce. That's the leaf working on its own." },
+  { h: "Flash the Mayfly", b: "In the Arduino IDE, add the board package <em>EnviroDIY ATmega Boards</em> → <em>EnviroDIY Mayfly 1284P</em> and the <em>Adafruit ADS1X15</em> library. Open the Grove-temp sketch, read its PORT CONFIG header, and upload. With the Grove sensor in the <strong>AA0/AA1 aux-analog socket</strong> (Grove power jumper at 3.3 V), the Serial Monitor at 115200 should show a <code>$MYC,…</code> line every 10 s and the green LED blinking once per line. The <code>temp_c</code> value should be close to whatever your thermostat says." },
+  { h: "Set up the Pi", b: "Flash Pi OS Lite 64-bit, clone the repo, run <code>leaf/setup.sh</code>, and do the key and <code>config.toml</code> steps it prints. One of those is setting <code>sensor = \"mayfly\"</code> in <code>/etc/mycelium-network-leaf/config.toml</code>. Leave <code>gateway_identity_hash</code> blank for now. You'll set it when you build and pair a gateway. Then reboot." },
+  { h: "Plug the chain together", b: "Wire it per the topology above, then check that both serial devices show up by running <code>ls -la /dev/rnode /dev/mayfly</code>. (udev pins each device by chip, so hub port order never matters.)" },
+  { h: "Start and watch", b: "Run <code>sudo systemctl start rnsd leaf-node</code>, then <code>journalctl -u leaf-node -f</code>. With no gateway yet, you should see the leaf sampling real readings and queuing them, with lines like <code>sampled: temp_c=21.340 (queue depth 1)</code> and the queue depth climbing. The LED slow-blinks <em>discovering</em> while it listens for a gateway to announce itself. That is the leaf working on its own." },
 ];
 ---
-<Base title="Build guide — the bench leaf" description="Step-by-step: build a Mycelium bench leaf from off-the-shelf parts in an afternoon. A $7 thermometer to an encrypted reading in your own spreadsheet.">
+<Base title="The bench leaf build guide" description="Build a Mycelium bench leaf from off-the-shelf parts in an afternoon. A $7 thermometer to an encrypted reading in your own spreadsheet.">
   <SiteNav current="build" />
 
   <article class="guide" id="main">
@@ -44,14 +44,14 @@ const steps = [
       <p class="crumb mono"><a href={`${base}/build`}>← Build</a> · guide</p>
       <h1>The bench leaf</h1>
       <p class="meta mono">~$176 · an afternoon · no soldering</p>
-      <p class="lede">This builds the sensor node itself — the leaf: a Grove
-      thermistor → a Mayfly logger → your Pi, which seals each reading with
-      AES-256-GCM and hands it to the LoRa radio, queued for delivery, with a
-      status LED blinking through it all. USB wall power, no solar, no enclosure.
-      A leaf on its own senses, seals, and queues; it starts delivering to a
-      spreadsheet you own the moment you <a href={`${base}/build/gateway`}>add a
-      gateway</a> — so this guide gets the leaf working and proving itself, no
-      gateway required.</p>
+      <p class="lede">This guide builds the sensor node itself, the leaf. A Grove
+      thermistor feeds a Mayfly logger, which feeds your Pi. The Pi encrypts each
+      reading with AES-256-GCM and hands it to the LoRa radio to queue for
+      delivery, and a status LED blinks the whole time. It runs on USB wall power,
+      with no solar and no enclosure. A leaf on its own senses, encrypts, and
+      queues readings. It starts actually delivering them to a spreadsheet you own
+      once you <a href={`${base}/build/gateway`}>add a gateway</a>, so this guide
+      just gets the leaf working and proving itself, with no gateway required.</p>
 
       <h2>Parts</h2>
       <table class="parts mono">
@@ -66,13 +66,13 @@ const steps = [
       <h2>Wiring</h2>
       <p>The Pi Zero 2 W has two micro-USB ports and only one carries data:</p>
       <pre class="evidence mono">{topology}</pre>
-      <p class="callout mono">⚠ Never power the radio without its antenna attached
-      — transmitting into nothing can kill the TTGO. With the antenna on a
-      bulkhead through the box wall, "attached" becomes the box's resting state.</p>
-      <p class="dim small">Connector note: LoRa boards are normally standard
-      <strong>SMA</strong> (board jack with a centre socket) — not RP-SMA, which
-      looks identical in photos and won't mate. Verified June 2026: these boards
-      are standard SMA. Order plain SMA.</p>
+      <p class="callout mono">⚠ Never power the radio without its antenna attached.
+      Transmitting into nothing can kill the TTGO. If you mount the antenna on a
+      bulkhead through the box wall, "attached" just becomes the box's resting state.</p>
+      <p class="dim small">A note on connectors. LoRa boards normally use standard
+      <strong>SMA</strong> (the board jack has a centre socket), not RP-SMA. RP-SMA
+      looks identical in photos but won't mate. I checked in June 2026 that these
+      boards are standard SMA, so order plain SMA.</p>
 
       <h2>Build steps</h2>
       <ol class="steps">
@@ -87,26 +87,26 @@ const steps = [
       <div class="prove">
         <h3>Prove it's real</h3>
         <p>Pinch the thermistor between two fingers for a minute. In the journal,
-        the sampled <code>temp_c</code> should climb a few degrees — the whole
-        sense-and-seal path, measuring an actual thing. Those queued readings
-        start landing in a spreadsheet you own the moment you add a gateway.</p>
+        the sampled <code>temp_c</code> should climb a few degrees. That is the
+        whole sense-and-encrypt path measuring an actual thing. Those queued
+        readings start landing in a spreadsheet you own once you add a gateway.</p>
       </div>
 
       <h2>Troubleshooting</h2>
       <ul class="trouble">
-        <li><strong>No <code>/dev/mayfly</code>:</strong> run <code>lsusb</code> — if the Mayfly's chip isn't <code>10c4:ea60</code>, adjust the udev rule in <code>leaf/setup.sh</code>.</li>
-        <li><strong><code>no valid MSAI line within 45s</code>:</strong> Mayfly unpowered (check the hub), unflashed, or its cable is power-only. Open the port by hand: <code>python3 -m serial.tools.miniterm /dev/mayfly 115200</code>.</li>
-        <li><strong>Readings but wrong temperature:</strong> the Grove power jumper is at 5 V while the math assumes 3.3 V — flip the jumper.</li>
+        <li><strong>No <code>/dev/mayfly</code>:</strong> run <code>lsusb</code>. If the Mayfly's chip isn't <code>10c4:ea60</code>, adjust the udev rule in <code>leaf/setup.sh</code>.</li>
+        <li><strong><code>no valid MSAI line within 45s</code>:</strong> the Mayfly is unpowered (check the hub), unflashed, or its cable is power-only. You can open the port by hand with <code>python3 -m serial.tools.miniterm /dev/mayfly 115200</code>.</li>
+        <li><strong>Readings but wrong temperature:</strong> the Grove power jumper is at 5 V while the math assumes 3.3 V, so flip the jumper.</li>
       </ul>
 
-      <h2>What this proves — and what it doesn't</h2>
-      <p><strong>Proves:</strong> the full encrypted pipeline end to end, the
+      <h2>What this proves, and what it doesn't</h2>
+      <p><strong>It proves</strong> the full encrypted pipeline end to end, the
       sensor-protocol contract across two independent implementations, named
-      multi-parameter readings, and the whole reliability stack under a real
-      sensor.</p>
-      <p class="dim"><strong>Doesn't prove:</strong> power architecture,
-      weatherproofing, SDI-12, or a submersible water-temp probe — those come
-      with the field build and the sonde, once they've survived real weather.</p>
+      multi-parameter readings, and the whole reliability stack running under a
+      real sensor.</p>
+      <p class="dim"><strong>It doesn't prove</strong> the power architecture,
+      weatherproofing, SDI-12, or a submersible water-temp probe. Those come with
+      the field build and the sonde, once they have survived real weather.</p>
 
       <div class="ctas">
         <a class="btn-primary" href={`${base}/build/gateway`}>Next: add a gateway →</a>

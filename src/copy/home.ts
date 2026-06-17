@@ -67,7 +67,7 @@ Mycelium is an open-source, LoRa mesh telemetry network designed to make adding 
     cards: [
       {
         title: `Sense`,
-        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. (integration for I²C, SPI, and OneWire sensors are in development) The hardware generates a 12 V boost to power external sondes (up to ~100 mA). Readings are encrypted with AES-256-GCM the moment they're taken.`,
+        body: `Any analog or SDI-12 sensor, from a $7 thermistor to a research sonde, plugs into the same node hardware. (integration for I²C, SPI, and OneWire sensors are in development). The hardware generates a 12 V boost to power external sondes (up to ~100 mA). Readings are encrypted with AES-256-GCM the moment they're taken.`,
       },
       {
         title: `Mesh`,
