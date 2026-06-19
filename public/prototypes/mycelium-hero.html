@@ -316,8 +316,14 @@ function resize() {
     for (const n of nodes) { n.x *= sx; n.y *= sy; }
     scaleGeometry(sx, sy); // links/strands move with their nodes (else they strand mid-air)
     routeDirty = true;     // range is in px → re-evaluate who can hear whom
-    if (staticMode) renderStaticStill(); // the still doesn't loop — redraw it in place
   }
+  // Assigning canvas.width above CLEARS the bitmap. The animation loop repaints
+  // every frame so a clear never shows — but the reduced-motion still has no
+  // loop, so ANY resize (notably the ResizeObserver's first fire, right after
+  // the still is drawn) would leave the canvas blank. Redraw it here whenever
+  // we're static. This is what blanked the hero on phones with Reduce Motion /
+  // Low Power Mode on (prefers-reduced-motion → the static still path).
+  if (staticMode && nodes.length) renderStaticStill();
 }
 addEventListener("resize", resize);
 // iOS Safari can settle the iframe's size after this script first runs; observe
@@ -1020,34 +1026,7 @@ function init() {
   if (reduced) { growStatic(); }
   else { seed(); requestAnimationFrame(frame); }
 }
-// TEMP self-diagnostic: shows a tiny readout ONLY if the hero is still blank
-// after load (no size / no nodes) or a script error fired. Invisible when the
-// animation works. Remove once mobile is confirmed.
-function showDiag(t) {
-  let d = document.getElementById("diag");
-  if (!d) { d = document.createElement("div"); d.id = "diag";
-    d.style.cssText = "position:absolute;left:6px;bottom:6px;z-index:9;color:#9ff5c9;font:11px/1.4 ui-monospace,monospace;background:#000d;padding:5px 8px;max-width:94%;border-radius:5px";
-    document.body.appendChild(d); }
-  d.textContent = "hero: " + t;
-}
-addEventListener("error", e => showDiag("ERR " + (e.message || e.error)));
 init();
-setTimeout(() => {
-  // TEMP DIAGNOSTIC: on touch devices, ALWAYS report the hero's state so we can
-  // see why it's blank on mobile (desktop stays quiet when it's working). The
-  // drawn-pixel sample distinguishes "didn't draw" from "drew but isn't visible".
-  const coarse = matchMedia("(pointer: coarse)").matches || innerWidth < 720;
-  if (!coarse && W && H && nodes.length) return;
-  let lit = 0, tot = 0;
-  try {
-    for (let gx = 1; gx < 7; gx++) for (let gy = 1; gy < 7; gy++) {
-      tot++;
-      const px = ctx.getImageData(Math.floor(canvas.width * gx / 7), Math.floor(canvas.height * gy / 7), 1, 1).data;
-      if (px[3] > 0) lit++;
-    }
-  } catch (e) { tot = -1; }
-  showDiag(`W${W} H${H} cw${document.documentElement.clientWidth} ch${document.documentElement.clientHeight} iw${innerWidth} ih${innerHeight} dpr${devicePixelRatio} cvs${canvas.width}x${canvas.height} n${nodes.length} r${reduced ? 1 : 0} drawn${lit}/${tot}`);
-}, 3500);
 </script>
 </body>
 </html>
