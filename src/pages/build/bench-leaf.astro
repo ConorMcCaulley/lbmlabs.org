@@ -9,7 +9,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const repo = "https://github.com/LBM-Labs/Mycelium_Network"; // A7
 const parts = [
   ["Raspberry Pi Zero 2 W + 32 GB high-endurance microSD", "$32", "the node's computer"],
-  ["Official 5 V 2.5 A micro-USB supply", "$8", "into the PWR IN port"],
+  ["USB power bank (a phone charging bank)", "~$20", "powers the node into PWR IN; a 5 V wall supply also works on the bench"],
   ["Micro-USB OTG adapter", "$3", "into the USB (data) port"],
   ["2-port USB 2.0 hub", "$5", "bus-powered is fine on the 2.5 A supply"],
   ["LILYGO TTGO LoRa32 v2.1 + 915 MHz antenna", "$25", "the radio, never power it without the antenna"],
@@ -19,9 +19,9 @@ const parts = [
   ["Seeed Grove Temperature Sensor v1.2", "$7", "NTC thermistor, zero wiring"],
   ["Grove cable", "$1", "usually ships with the sensor"],
   ["LED + ~330 Ω resistor + breadboard + 2 jumpers", "$3", "status LED on GPIO 17"],
-  ["Plastic project box", "on hand", "it all goes in here"],
+  ["Waterproof case (Pelican-style) + cable gland", "~$30", "weatherproof enclosure; the antenna mounts through the wall"],
 ];
-const topology = `5V 2.5A supply ──► [PWR IN]   (power pins only, no data)
+const topology = `USB power bank ──► [PWR IN]   (power pins only, no data)
 
 [USB] ── OTG adapter ── 2-port hub ──┬── TTGO LoRa32  → /dev/rnode
                                      └── Mayfly v1.1  → /dev/mayfly
@@ -43,15 +43,24 @@ const steps = [
     <div class="wrap narrow">
       <p class="crumb mono"><a href={`${base}/build`}>← Build</a> · guide</p>
       <h1>The bench leaf</h1>
-      <p class="meta mono">~$176 · an afternoon · no soldering</p>
-      <p class="lede">This guide builds the sensor node itself, the leaf. A Grove
-      thermistor feeds a Mayfly logger, which feeds your Pi. The Pi encrypts each
-      reading with AES-256-GCM and hands it to the LoRa radio to queue for
-      delivery, and a status LED blinks the whole time. It runs on USB wall power,
-      with no solar and no enclosure. A leaf on its own senses, encrypts, and
-      queues readings. It starts actually delivering them to a spreadsheet you own
-      once you <a href={`${base}/build/gateway`}>add a gateway</a>, so this guide
-      just gets the leaf working and proving itself, with no gateway required.</p>
+      <p class="meta mono">v0.5 · ~$218 · an afternoon · no soldering</p>
+      <p class="lede">This guide builds the sensor node itself, the leaf, in the
+      <strong>v0.5</strong> build pictured here. A Grove thermistor feeds a Mayfly
+      logger, which feeds your Pi. The Pi encrypts each reading with AES-256-GCM and
+      hands it to the LoRa radio to queue for delivery, and a status LED blinks the
+      whole time. This version lives in a waterproof case and runs off a USB battery
+      bank, so it is portable enough to set out for a short field run, though
+      without solar yet its runtime is whatever the battery holds. A leaf on its own
+      senses, encrypts, and queues readings. It starts actually delivering them to a
+      spreadsheet you own once you <a href={`${base}/build/gateway`}>add a
+      gateway</a>, so this guide just gets the leaf working and proving itself, with
+      no gateway required.</p>
+
+      <figure class="photo">
+        <img src={`${base}/leaf.jpg`} width="1600" height="1200" loading="lazy"
+          alt="The v0.5 leaf laid out in an open tan waterproof case: a Raspberry Pi, an EnviroDIY Mayfly board, a LILYGO LoRa radio with its 915 MHz antenna, and a USB battery bank, foam-mounted." />
+        <figcaption class="ph-cap">The v0.5 leaf, with a Pi, the Mayfly, the LoRa radio, and a USB battery bank in a waterproof case. No solar yet, so it runs as long as the battery lasts.</figcaption>
+      </figure>
 
       <h2>Parts</h2>
       <table class="parts mono">
@@ -59,7 +68,7 @@ const steps = [
           {parts.map(([p, c, n]) => (
             <tr><td>{p}</td><td class="cost">{c}</td><td class="note">{n}</td></tr>
           ))}
-          <tr class="total"><td>Total</td><td class="cost">~$176</td><td></td></tr>
+          <tr class="total"><td>Total</td><td class="cost">~$218</td><td></td></tr>
         </tbody>
       </table>
 
@@ -67,8 +76,8 @@ const steps = [
       <p>The Pi Zero 2 W has two micro-USB ports and only one carries data:</p>
       <pre class="evidence mono">{topology}</pre>
       <p class="callout mono">⚠ Never power the radio without its antenna attached.
-      Transmitting into nothing can kill the TTGO. If you mount the antenna on a
-      bulkhead through the box wall, "attached" just becomes the box's resting state.</p>
+      Transmitting into nothing can kill the TTGO. With the antenna on a bulkhead
+      through the case wall, "attached" just becomes the case's resting state.</p>
       <p class="dim small">A note on connectors. LoRa boards normally use standard
       <strong>SMA</strong> (the board jack has a centre socket), not RP-SMA. RP-SMA
       looks identical in photos but won't mate. I checked in June 2026 that these
@@ -92,6 +101,12 @@ const steps = [
         readings start landing in a spreadsheet you own once you add a gateway.</p>
       </div>
 
+      <figure class="photo">
+        <img src={`${base}/leaf-closed.jpg`} width="1082" height="1600" loading="lazy"
+          alt="The same node sealed in its tan waterproof case, with the 915 MHz antenna mounted through the top of the case on a bulkhead." />
+        <figcaption class="ph-cap">Buttoned up, the antenna passes through the case wall on a bulkhead, and the whole node runs off the battery bank inside. Portable enough to set out for a short field run, though without solar it lasts only as long as the bank.</figcaption>
+      </figure>
+
       <h2>Troubleshooting</h2>
       <ul class="trouble">
         <li><strong>No <code>/dev/mayfly</code>:</strong> run <code>lsusb</code>. If the Mayfly's chip isn't <code>10c4:ea60</code>, adjust the udev rule in <code>leaf/setup.sh</code>.</li>
@@ -104,9 +119,11 @@ const steps = [
       sensor-protocol contract across two independent implementations, named
       multi-parameter readings, and the whole reliability stack running under a
       real sensor.</p>
-      <p class="dim"><strong>It doesn't prove</strong> the power architecture,
-      weatherproofing, SDI-12, or a submersible water-temp probe. Those come with
-      the field build and the sonde, once they have survived real weather.</p>
+      <p class="dim"><strong>It doesn't prove</strong> a season of real weather,
+      solar power (this runs off a battery bank, so its uptime is just the battery),
+      SDI-12, or a submersible water-temp probe. The waterproof case keeps the rain
+      off, but the full field build, with solar, a real sonde, and a season of
+      proof, is still ahead.</p>
 
       <div class="ctas">
         <a class="btn-primary" href={`${base}/build/gateway`}>Next: add a gateway →</a>
@@ -157,4 +174,10 @@ const steps = [
   .trouble { padding-left: var(--s-5); }
   .trouble li { margin-bottom: var(--s-3); line-height: 1.6; max-width: 64ch; }
   .ctas { margin-top: var(--s-7); }
+
+  .photo { margin: var(--s-6) 0; }
+  .photo img { display: block; width: 100%; max-width: 520px; height: auto;
+    border-radius: var(--r-sm); border: 1px solid var(--line); }
+  .ph-cap { margin-top: var(--s-2); font-size: var(--t-small); color: var(--dim);
+    line-height: 1.4; max-width: 60ch; }
 </style>

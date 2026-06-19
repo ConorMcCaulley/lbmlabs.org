@@ -15,14 +15,14 @@ const arch = "#";          // hardware-architecture deep link
 const issues = "#";        // repo issues
 const tiers = [
   {
-    n: "Tier 1", title: "The bench leaf", cost: "~$176 · one afternoon",
-    img: `${base}/bench-leaf.jpg`,
-    alt: "A Raspberry Pi Zero 2 W wired to a LILYGO LoRa radio with its antenna attached, sitting on a workbench. The Mayfly sensor board is not installed yet.",
-    caption: "The first bench leaf, a Pi Zero 2 W and a LoRa radio. No Mayfly sensor board on it yet.",
-    body: "This is the smallest build, but it still runs the entire pipeline. A $7 thermometer feeds a Mayfly logger, your Pi encrypts each reading with AES-256-GCM, a LoRa radio carries it to your gateway, and it lands in a Google Sheet you own. A status LED blinks the whole time so you can watch it working. It runs on USB wall power, so there is no solar, no enclosure, and no soldering.",
+    n: "Tier 1", title: "The bench leaf", cost: "v0.5 · ~$218 · one afternoon",
+    img: `${base}/leaf.jpg`,
+    alt: "The v0.5 leaf in an open tan waterproof case: a Raspberry Pi, an EnviroDIY Mayfly, a LoRa radio with its 915 MHz antenna, and a USB battery bank, foam-mounted.",
+    caption: "The v0.5 leaf, with a Pi, the Mayfly, the LoRa radio, and a battery bank in a waterproof case. No solar yet.",
+    body: "This is the smallest build, but it still runs the entire pipeline. A $7 thermometer feeds a Mayfly logger, your Pi encrypts each reading with AES-256-GCM, a LoRa radio carries it to your gateway, and it lands in a Google Sheet you own. A status LED blinks the whole time so you can watch it working. The v0.5 build lives in a waterproof case and runs off a USB battery bank, so it is portable for short field runs, with no solar yet and no soldering.",
     aside: "This is the build that teaches you the system. Pinch the thermistor between your fingers for a minute and you should watch the next few readings climb in your spreadsheet.",
     rows: [
-      ["Parts", "~$176, full list", bom],
+      ["Parts", "~$218, full list", bom],
       ["Guide", "step-by-step bring-up", guide],
       ["You'll need", "a laptop, a micro-SD reader, an afternoon", null],
     ],
